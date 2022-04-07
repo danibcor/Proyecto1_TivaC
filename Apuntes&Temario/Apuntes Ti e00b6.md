@@ -818,7 +818,7 @@ Para crear el sistema de coordinación basado en un semáforo binario:
 - Añadir una variable global:
     
     ```c
-    semaphoreHandle_t nombre_semaforo;
+    SemaphoreHandle_t nombre_semaforo;
     ```
     
 - Añadir la creación del semáforo binario antes de poner en marcha el planificador usando xSemaphoreCreateBinary.
@@ -1077,7 +1077,7 @@ Incluir los ficheros timers.h y timers.c en la carpeta FreeRTOS/Source y añadir
 Y habilitar la constante del fichero “FreeRTOSConfig.h”:
 
 ```c
-#include "timers.h"
+configUSE_TIMERS
 ```
 
 Crear timers:
