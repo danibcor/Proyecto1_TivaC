@@ -239,6 +239,48 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
         }
 
         break;
+	
+	case MESSAGE_ESTADO_SWITCH:
+        {
+            MESSAGE_ESTADO_SWITCH_PARAMETER estado;
+            int32_t ui32Status;
+
+            if (check_and_extract_command_param(parameters, parameterSize, &estado, sizeof(estado)) > 0)
+            {
+                UARTprintf("Llegan mensajes para comprobar estados de los switches...\r\n");
+
+                if((GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4) == 0) && (GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_0) == 0)){
+
+                    UARTprintf("Switch 1 y Switch 2 pulsados\r\n");
+                    estado.switch1 = 0;
+                    estado.switch2 = 0;
+
+                }else if(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4) == 0){
+
+                    UARTprintf("Switch 1 pulsado\r\n");
+                    estado.switch1 = 0;
+                    estado.switch2 = 1;
+
+                }else if(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_0) == 0){
+
+                    UARTprintf("Switch 2 pulsado\r\n");
+                    estado.switch2 = 0;
+                    estado.switch1 = 1;
+
+                }else{
+
+                    UARTprintf("Switch 1 o Switch 2 no pulsado\r\n");
+                    estado.switch2 = 1;
+                    estado.switch1 = 1;
+
+                }
+
+                //Envia el mensaje hacia QT
+                remotelink_sendMessage(MESSAGE_ESTADO_SWITCH,(void *)&estado,sizeof(estado));
+            }
+        }
+
+        break;
 
         case MESSAGE_ADC_SAMPLE:
         {
@@ -291,6 +333,18 @@ int main(void)
 
 	//Volvemos a configurar los LEDs en modo GPIO POR Defecto
 	MAP_GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3);
+	
+	//Inicializa los botones (tambien en el puerto F) y habilita sus interrupciones
+    	ButtonsInit();
+
+    	// COMO NO VAMOS A USAR INTERRUPCIONES PARA LA GESTION DE LOS SWITCHES PORQUE LO VAMOS A HACER POR SONDEO
+    	// NO ES NECESARIO CONFIGURAR LAS INTERRUPCIONES DEL PUERTO F NI TAMPOCO MODIFICAR LA TABLA DE VECTORES
+    	// DEL FICHERO STARTUP_CCS.C
+    	// --- CODIGO NO NECESARIO ---
+   	//GPIOIntTypeSet(GPIO_PORTF_BASE, ALL_BUTTONS,GPIO_FALLING_EDGE);
+    	//IntPrioritySet(INT_GPIOF,configMAX_SYSCALL_INTERRUPT_PRIORITY);
+    	//GPIOIntEnable(GPIO_PORTF_BASE,ALL_BUTTONS);
+   	 //IntEnable(INT_GPIOF);
 
 
 	/********************************      Creacion de tareas *********************/
