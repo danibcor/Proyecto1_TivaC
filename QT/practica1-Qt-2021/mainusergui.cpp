@@ -57,7 +57,7 @@ MainUserGUI::MainUserGUI(QWidget *parent) :  // Constructor de la clase
     connect(ui->Knob,SIGNAL(valueChanged(double)),this,SLOT(cambiaBrillo(double)));
 
     // Conexion boton de estado switches
-    connect(ui->botonEstado,SIGNAL(clicked(bool)),this,SLOT(comprobarEstado(bool)));
+    connect(ui->botonEstado,SIGNAL(clicked()),this,SLOT(comprobarEstado()));
 
     //Conectamos Slots del objeto "Tiva" con Slots de nuestra aplicacion (o con widgets)
     connect(&tiva,SIGNAL(statusChanged(int,QString)),this,SLOT(tivaStatusChanged(int,QString)));
@@ -134,8 +134,6 @@ void MainUserGUI::cambiaLEDs(void)
     tiva.sendMessage(MESSAGE_LED_GPIO,QByteArray::fromRawData((char *)&parameter,sizeof(parameter)));
 }
 
-
-
 //**** Slot asociado a la recepción de mensajes desde la TIVA ********/
 //Está conectado a una señale generada por el objeto TIVA de clase QTivaRPC (se conecta en el constructor de la ventana, más arriba en este fichero))
 //Se pueden añadir los que casos que quieran para completar la aplicación
@@ -187,6 +185,32 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
         }
         break;
 
+        case MESSAGE_ESTADO_SWITCH:
+        {
+            MESSAGE_ESTADO_SWITCH_PARAMETER estado;
+
+            if (check_and_extract_command_param(datos.data(), datos.size(), &estado, sizeof(estado)) > 0)
+            {
+                if(estado.switch1 == 0 && estado.switch2 == 0){ // Switch 1 y Switch 2 pulsados, encendemos los 2 leds
+                    ui->led_rojo->setChecked(1);
+                    ui->led_azul->setChecked(1);
+                }else if(estado.switch1 == 0){ // Switch 1 pulsado, enciendo el led rojo
+                    ui->led_rojo->setChecked(1);
+                }else if(estado.switch2 == 0){ // Switch 2 pulsado, enciendo el led azul
+                    ui->led_azul->setChecked(1);
+                }else{ // Switch 2 o Switch 1 no pulsado, apago los 2 leds
+                    ui->led_rojo->setChecked(0);
+                    ui->led_azul->setChecked(0);
+                }
+            }
+            else
+            {   //Si el tamanho de los datos no es correcto emito la senhal statusChanged(...) para reportar un error
+                ui->statusLabel->setText(tr("Error al recibir el estado de los switches"));
+            }
+
+        }
+        break;
+
         default:
             //Notifico que ha llegado un tipo de mensaje desconocido
             ui->statusLabel->setText(tr("Status: Recibido mensaje desconocido %1").arg(message_type));
@@ -221,11 +245,13 @@ void MainUserGUI::tivaStatusChanged(int status,QString message)
              ui->runButton->setEnabled(false);
              ui->statusLabel->setText(message);
         break;
+
         case TivaRemoteLink::FragmentedPacketError:
         case TivaRemoteLink::CRCorStuffError:
             //Errores detectados en la recepcion de paquetes
             ui->statusLabel->setText(message);
         break;
+
         default:
             //Otros errores (por ejemplo, abriendo el puerto)
             processError(tiva.getLastErrorMessage());
@@ -258,9 +284,18 @@ void MainUserGUI::colorWheel_cambiaRGB(const QColor &arg1)
     tiva.sendMessage(MESSAGE_RGB,QByteArray::fromRawData((char *)&color,sizeof(color)));
 }
 
-
-void MainUserGUI::comprobarEstado(bool checked)
+// Vamos a mandar un mensaje a la Tiva para que sepa que queremos obtener el estado de los switches
+// Desde la propia tiva una vez recibida el mensaje la propia tiva colocará los valores necesarios
+// a la variable estado y mandará un mensaje a QT. QT tratará este mensaje y otros en la funcion
+// void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
+// esta función se encuentra mas arriba en este fichero
+void MainUserGUI::comprobarEstado()
 {
+    MESSAGE_ESTADO_SWITCH_PARAMETER estado;
 
+    if(ui->botonEstado->isChecked()){
+        ui->statusLabel->setText(tr("Pidiendo estado de los switches"));
+        tiva.sendMessage(MESSAGE_ESTADO_SWITCH,QByteArray::fromRawData((char *)&estado,sizeof(estado)));
+    }
 }
 
