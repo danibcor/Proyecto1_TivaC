@@ -35,6 +35,8 @@
 #define COMMAND_TASK_PRIORITY (tskIDLE_PRIORITY+1)
 #define ADC_TASK_STACK (256)
 #define ADC_TASK_PRIORITY (tskIDLE_PRIORITY+1)
+#define SWITCHES_TASK_STACK (256)
+#define SWITCHES_TASK_PRIORITY (tskIDLE_PRIORITY+1)
 
 //Globales
 uint32_t g_ui32CPUUsage;
@@ -135,11 +137,10 @@ static portTASK_FUNCTION(ADCTask,pvParameters)
         parameter.chan3=muestras.chan3;
         parameter.chan4=muestras.chan4;
 
-        //Encia el mensaje hacia QT
+        //Envia el mensaje hacia QT
         remotelink_sendMessage(MESSAGE_ADC_SAMPLE,(void *)&parameter,sizeof(parameter));
     }
 }
-
 
 //Funcion callback que procesa los mensajes recibidos desde el PC (ejecuta las acciones correspondientes a las ordenes recibidas)
 static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t parameterSize)
@@ -153,7 +154,9 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
         {
             status=remotelink_sendMessage(MESSAGE_PING,NULL,0);
         }
+
         break;
+
         case MESSAGE_LED_GPIO:
         {
                 MESSAGE_LED_GPIO_PARAMETER parametro;
@@ -167,6 +170,7 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
                     status=PROT_ERROR_INCORRECT_PARAM_SIZE; //Devuelve un error
                 }
         }
+
         break;
 
         case MESSAGE_MODE:
@@ -239,8 +243,8 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
         }
 
         break;
-	
-	case MESSAGE_ESTADO_SWITCH:
+
+        case MESSAGE_ESTADO_SWITCH:
         {
             MESSAGE_ESTADO_SWITCH_PARAMETER estado;
             int32_t ui32Status;
@@ -286,7 +290,9 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
         {
             configADC_DisparaADC(); //Dispara la conversion (por software)
         }
+
         break;
+
        default:
            //mensaje desconocido/no implementado
            status=PROT_ERROR_UNIMPLEMENTED_COMMAND; //Devuelve error.
@@ -304,7 +310,6 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
 //*****************************************************************************
 int main(void)
 {
-
 	//
 	// Set the clocking to run at 40 MHz from the PLL.
 	//
@@ -333,18 +338,18 @@ int main(void)
 
 	//Volvemos a configurar los LEDs en modo GPIO POR Defecto
 	MAP_GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3);
-	
-	//Inicializa los botones (tambien en el puerto F) y habilita sus interrupciones
-    	ButtonsInit();
 
-    	// COMO NO VAMOS A USAR INTERRUPCIONES PARA LA GESTION DE LOS SWITCHES PORQUE LO VAMOS A HACER POR SONDEO
-    	// NO ES NECESARIO CONFIGURAR LAS INTERRUPCIONES DEL PUERTO F NI TAMPOCO MODIFICAR LA TABLA DE VECTORES
-    	// DEL FICHERO STARTUP_CCS.C
-    	// --- CODIGO NO NECESARIO ---
-   	//GPIOIntTypeSet(GPIO_PORTF_BASE, ALL_BUTTONS,GPIO_FALLING_EDGE);
-    	//IntPrioritySet(INT_GPIOF,configMAX_SYSCALL_INTERRUPT_PRIORITY);
-    	//GPIOIntEnable(GPIO_PORTF_BASE,ALL_BUTTONS);
-   	 //IntEnable(INT_GPIOF);
+    //Inicializa los botones (tambien en el puerto F) y habilita sus interrupciones
+    ButtonsInit();
+
+    // COMO NO VAMOS A USAR INTERRUPCIONES PARA LA GESTION DE LOS SWITCHES PORQUE LO VAMOS A HACER POR SONDEO
+    // NO ES NECESARIO CONFIGURAR LAS INTERRUPCIONES DEL PUERTO F NI TAMPOCO MODIFICAR LA TABLA DE VECTORES
+    // DEL FICHERO STARTUP_CCS.C
+    // --- CODIGO NO NECESARIO ---
+    //GPIOIntTypeSet(GPIO_PORTF_BASE, ALL_BUTTONS,GPIO_FALLING_EDGE);
+    //IntPrioritySet(INT_GPIOF,configMAX_SYSCALL_INTERRUPT_PRIORITY);
+    //GPIOIntEnable(GPIO_PORTF_BASE,ALL_BUTTONS);
+    //IntEnable(INT_GPIOF);
 
 
 	/********************************      Creacion de tareas *********************/
@@ -362,14 +367,12 @@ int main(void)
 	    while(1); //Inicializo la aplicacion de comunicacion con el PC (Remote). Ver fichero remotelink.c
 	}
 
-
 	//Para especificacion 2: Inicializa el ADC y crea una tarea...
 	configADC_IniciaADC();
     if((xTaskCreate(ADCTask, (portCHAR *)"ADC", ADC_TASK_STACK,NULL,ADC_TASK_PRIORITY, NULL) != pdTRUE))
     {
         while(1);
     }
-
 
 	//
 	// Arranca el  scheduler.  Pasamos a ejecutar las tareas que se hayan activado.
@@ -382,4 +385,3 @@ int main(void)
 		//Si llego aqui es que algo raro ha pasado
 	}
 }
-
