@@ -304,6 +304,18 @@ Otros tipos:
 
 Tabla de vectores en “**XXXX_startup_ccs.c**”.
 
+Se utiliza para asignar rutinas de tratamiento de interrupción asignadas a puertos, timers ...
+
+Hay que asegurarse:
+
+- Colocar en la parte del documento de “startup_ccs.c” donde pone “External declaration...”:
+
+```c
+extern "Nombre_RTI"(void); 
+```
+
+- Meter la RTI en la tabla de vectores tal y como se ve en las imágenes siguiente.
+
 ![Untitled](Apuntes%20Ti%20e00b6/Untitled%202.png)
 
 ![Untitled](Apuntes%20Ti%20e00b6/Untitled%203.png)
@@ -1083,7 +1095,8 @@ configUSE_TIMERS
 Crear timers:
 
 ```c
-xTimer = xTimerCreate(“Timer”,100,pdTRUE,pvTimerID ,vTimerCallback); 
+// Recordar que portTICK_PERIOD_MS permite convertir ms en ticks del sistema
+xTimer = xTimerCreate(“Timer”,duracion/portTICK_PERIOD_MS,pdTRUE,pvTimerID ,vTimerCallback); 
 if( xTimer == NULL ){ 
 	while(1);
 }
@@ -1118,3 +1131,39 @@ void vTimerCallback(TimerHandle_t pxTimer)
 ```
 
 Se debe evitar que una función callback de un timer FreeRTOS se quede bloqueada indefinidamente o por mucho tiempo.
+
+## 3.5. Introducción a QT
+
+### 3.5.1. Crear un entorno en QT
+
+Pasos a seguir para crear un entorno de QT:
+
+- Iniciar el programa QTCreator. Pulsar en File → New File or Project ó Project → New. Si tenemos un proyecto ya existente abrimos el fichero .pro de la carpeta.
+- Nosotros trabajaremos principalmente en el desarrollo de aplicciones gráficas utilizando C++, por lo que vamos a seleccionar: Application y QT Widgets Application como opción de desarrollo y pulsaremos el botón Choose...
+- Configuramos el nombre del proyecto y la carpeta que lo va a contener y seleccionamos el sistema de construcción de la aplicación QT. Seleccionamos qmake.
+- Posteriormente se abrirá una ventana similar a la siguiente:
+    
+    ![Untitled](Apuntes%20Ti%20e00b6/Untitled%207.png)
+    
+    QTCreator nos creará automáticamente una clase llamada MainWindow, que deriva de la clase QMainWindow de la biblioteca QT, y cuyo código quedará almacenado en los ficheros mainwindow.cpp (implementación) y mainwindow.h (declaración). Además, nos creará un fichero de interfaz de usuario mainwindow.ui donde podremos editar el tamaño y aspecto de nuestra ventana principal y añadirle botones, controles e indicadores entre otros.
+    
+- Posteriormente seleccionamos el idioma Spanish(Spain).
+- Seleccionamos la versión de QT y compilador que vamos a utilizar en el proyecto, en nuestro caso, “Desktop Qt 6.2.3 MinGW 64-bit”.
+- Finalmente, nos aparecerá un diálogo con el resumen de opciones elegidas para el proyecto, finalizamos.
+
+### 3.5.2. Opciones de compilación para todas las bibliotecas adicionales
+
+Conforme se van añadiendo opciones al fichero de proyecto (.pro) para añadir soporte a los componentes QT adicionales en bibliotecas como analogwidgets y qwt (y más adelante para MQTT) se deberán incluir las siguientes opciones en el fichero .pro:
+
+```c
+QT += core gui widgets svg charts network serialport
+CONFIG += qwt analogwidgets qmqtt colorwidgets embeddeduma
+```
+
+### 3.5.3. Desactivación del plugin “Clang-code-model”
+
+Este plugin realiza un análisis sintáctico y semántico del código en tiempo real y va mostrando consejos en pantalla. El principal motivo para desactivarlo es que afecta al autocompletado del código. Para desactivarlo:
+
+help → About plugins → Buscar en la sección C++ buscar “ClangCodeModel”, desmarcamos la pestaña y cerramos el configurador de plugins y reiniciamos QT.
+
+Esto es necesario hacerlo sólo una vez.
