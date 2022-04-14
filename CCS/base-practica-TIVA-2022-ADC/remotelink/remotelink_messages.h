@@ -20,6 +20,8 @@ typedef enum {
     MESSAGE_ADC_SAMPLE,
     MESSAGE_MODE,
     MESSAGE_RGB,
+    MESSAGE_ESTADO_SWITCH,
+    MESSAGE_ESTADO_SWITCH_EVENTOS,
     //etc, etc...
 } messageTypes;
 
@@ -27,6 +29,16 @@ typedef enum {
 // estructuras adecuadas a los mensajes usados, y asegurarse de su compatibilidad en ambos extremos
 
 #pragma pack(1) //Cambia el alineamiento de datos en memoria a 1 byte.
+
+typedef struct{
+    uint8_t switch1;
+    uint8_t switch2;
+} MESSAGE_ESTADO_SWITCH_EVENTOS_PARAMETER;
+
+typedef struct{
+    uint8_t switch1;
+    uint8_t switch2;
+} MESSAGE_ESTADO_SWITCH_PARAMETER;
 
 typedef struct{
     uint8_t R;
