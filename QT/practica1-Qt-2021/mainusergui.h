@@ -27,6 +27,7 @@ private slots:
     void colorWheel_cambiaRGB(const QColor &arg1);
     void cambiaBrillo(double value);
     void comprobarEstado();
+    void comprobarEstado_Eventos();
 
     //Slots asociados por nombre
     void on_runButton_clicked();    
