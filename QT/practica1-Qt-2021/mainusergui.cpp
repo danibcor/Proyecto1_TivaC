@@ -59,6 +59,9 @@ MainUserGUI::MainUserGUI(QWidget *parent) :  // Constructor de la clase
     // Conexion boton de estado switches
     connect(ui->botonEstado,SIGNAL(clicked()),this,SLOT(comprobarEstado()));
 
+    // Conexion boton de estado switches por eventos
+    connect(ui->botonEstado_evento,SIGNAL(clicked()),this,SLOT(comprobarEstado_Eventos()));
+
     //Conectamos Slots del objeto "Tiva" con Slots de nuestra aplicacion (o con widgets)
     connect(&tiva,SIGNAL(statusChanged(int,QString)),this,SLOT(tivaStatusChanged(int,QString)));
     connect(&tiva,SIGNAL(messageReceived(uint8_t,QByteArray)),this,SLOT(messageReceived(uint8_t,QByteArray)));
@@ -194,10 +197,12 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
                 if(estado.switch1 == 0 && estado.switch2 == 0){ // Switch 1 y Switch 2 pulsados, encendemos los 2 leds
                     ui->led_rojo->setChecked(1);
                     ui->led_azul->setChecked(1);
-                }else if(estado.switch1 == 0){ // Switch 1 pulsado, enciendo el led rojo
+                }else if(estado.switch1 == 0 && estado.switch2 == 1){ // Switch 1 pulsado y el Switch 2 no, enciendo el led rojo
                     ui->led_rojo->setChecked(1);
-                }else if(estado.switch2 == 0){ // Switch 2 pulsado, enciendo el led azul
+                    ui->led_azul->setChecked(0);
+                }else if(estado.switch2 == 0){ // Switch 2 pulsado y el Switch 1 no, enciendo el led azul
                     ui->led_azul->setChecked(1);
+                    ui->led_rojo->setChecked(0);
                 }else{ // Switch 2 o Switch 1 no pulsado, apago los 2 leds
                     ui->led_rojo->setChecked(0);
                     ui->led_azul->setChecked(0);
@@ -206,6 +211,34 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
             else
             {   //Si el tamanho de los datos no es correcto emito la senhal statusChanged(...) para reportar un error
                 ui->statusLabel->setText(tr("Error al recibir el estado de los switches"));
+            }
+
+        }
+        break;
+
+        case MESSAGE_ESTADO_SWITCH_EVENTOS:
+        {
+            MESSAGE_ESTADO_SWITCH_EVENTOS_PARAMETER estado;
+
+            if (check_and_extract_command_param(datos.data(), datos.size(), &estado, sizeof(estado)) > 0)
+            {
+                if(estado.switch1 == 0 && estado.switch2 == 0){ // Switch 1 y Switch 2 pulsados, encendemos los 2 leds
+                    ui->led_rojo_evento->setChecked(1);
+                    ui->led_azul_evento->setChecked(1);
+                }else if(estado.switch1 == 0 && estado.switch2 == 1){ // Switch 1 pulsado y el Switch 2 no, enciendo el led rojo
+                    ui->led_rojo_evento->setChecked(1);
+                    ui->led_azul_evento->setChecked(0);
+                }else if(estado.switch2 == 0){ // Switch 2 pulsado y el Switch 1 no, enciendo el led azul
+                    ui->led_azul_evento->setChecked(1);
+                    ui->led_rojo_evento->setChecked(0);
+                }else{ // Switch 2 o Switch 1 no pulsado, apago los 2 leds
+                    ui->led_rojo_evento->setChecked(0);
+                    ui->led_azul_evento->setChecked(0);
+                }
+            }
+            else
+            {   //Si el tamanho de los datos no es correcto emito la senhal statusChanged(...) para reportar un error
+                ui->statusLabel->setText(tr("Error al recibir el estado de los switches por eventos"));
             }
 
         }
@@ -294,8 +327,17 @@ void MainUserGUI::comprobarEstado()
     MESSAGE_ESTADO_SWITCH_PARAMETER estado;
 
     if(ui->botonEstado->isChecked()){
-        ui->statusLabel->setText(tr("Pidiendo estado de los switches"));
         tiva.sendMessage(MESSAGE_ESTADO_SWITCH,QByteArray::fromRawData((char *)&estado,sizeof(estado)));
+    }
+}
+
+
+void MainUserGUI::comprobarEstado_Eventos()
+{
+    MESSAGE_ESTADO_SWITCH_EVENTOS_PARAMETER estado;
+
+    if(ui->botonEstado_evento->isChecked()){
+        tiva.sendMessage(MESSAGE_ESTADO_SWITCH_EVENTOS,QByteArray::fromRawData((char *)&estado,sizeof(estado)));
     }
 }
 
