@@ -38,9 +38,16 @@
 #define SWITCHES_TASK_STACK (256)
 #define SWITCHES_TASK_PRIORITY (tskIDLE_PRIORITY+1)
 
+#define SW2TASKPRIO 1            // Prioridad para la tarea SW2TASK
+#define SW2TASKSTACKSIZE 128     // TamaÃ±o de pila para la tarea SW2TASK
+
 //Globales
 uint32_t g_ui32CPUUsage;
 uint32_t g_ulSystemClock;
+
+QueueHandle_t cola_freertos;
+
+uint32_t botonPulsado = 0;
 
 //*****************************************************************************
 //
@@ -113,6 +120,39 @@ void vApplicationMallocFailedHook (void)
 // A continuacion van las tareas...
 //
 //*****************************************************************************
+static portTASK_FUNCTION(Switch2Task,pvParameters)
+{
+    MESSAGE_ESTADO_SWITCH_EVENTOS_PARAMETER estado;
+    uint32_t ui32Status;
+
+    while(1)
+    {
+        if (xQueueReceive(cola_freertos,&ui32Status,portMAX_DELAY) == pdTRUE){
+
+            if(ui32Status == 0){
+                UARTprintf("Switch 1 y Switch 2 pulsados\r\n");
+                estado.switch1 = 0;
+                estado.switch2 = 0;
+            }else if (!(ui32Status & LEFT_BUTTON)){
+                UARTprintf("Switch 1 pulsado\r\n");
+                estado.switch1 = 0;
+                estado.switch2 = 1;
+            }else if (!(ui32Status & RIGHT_BUTTON)){
+                UARTprintf("Switch 2 pulsado\r\n");
+                estado.switch2 = 0;
+                estado.switch1 = 1;
+            }else{
+                UARTprintf("Switch 1 o Switch 2 no pulsado\r\n");
+                estado.switch2 = 1;
+                estado.switch1 = 1;
+            }
+
+            //Envia el mensaje hacia QT
+            remotelink_sendMessage(MESSAGE_ESTADO_SWITCH_EVENTOS,(void *)&estado,sizeof(estado));
+
+        }
+    }
+}
 
 
 //Para especificacion 2. Esta tarea no tendria por que ir en main.c
@@ -247,7 +287,6 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
         case MESSAGE_ESTADO_SWITCH:
         {
             MESSAGE_ESTADO_SWITCH_PARAMETER estado;
-            int32_t ui32Status;
 
             if (check_and_extract_command_param(parameters, parameterSize, &estado, sizeof(estado)) > 0)
             {
@@ -282,6 +321,47 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
                 //Envia el mensaje hacia QT
                 remotelink_sendMessage(MESSAGE_ESTADO_SWITCH,(void *)&estado,sizeof(estado));
             }
+            else
+            {
+                status=PROT_ERROR_INCORRECT_PARAM_SIZE; //Devuelve un error
+            }
+        }
+
+        break;
+
+        case MESSAGE_ESTADO_SWITCH_EVENTOS:
+        {
+
+            MESSAGE_ESTADO_SWITCH_EVENTOS_PARAMETER estado;
+
+            if (check_and_extract_command_param(parameters, parameterSize, &estado, sizeof(estado)) > 0)
+            {
+                if(botonPulsado == 0){
+
+                    botonPulsado = 1;
+
+                    GPIOIntTypeSet(GPIO_PORTF_BASE, ALL_BUTTONS,GPIO_FALLING_EDGE);
+                    IntPrioritySet(INT_GPIOF,configMAX_SYSCALL_INTERRUPT_PRIORITY);
+                    GPIOIntEnable(GPIO_PORTF_BASE,ALL_BUTTONS);
+                    IntEnable(INT_GPIOF);
+
+                    if((xTaskCreate(Switch2Task, "Sw2",SW2TASKSTACKSIZE, NULL, tskIDLE_PRIORITY + SW2TASKPRIO, NULL) != pdTRUE))
+                    {
+                        while(1);
+                    }
+                }else{
+                    botonPulsado = 0;
+                    // Deshabilitamos las interrupciones de los switches
+                    IntDisable(INT_GPIOF);
+                    estado.switch2 = 1;
+                    estado.switch1 = 1;
+                    remotelink_sendMessage(MESSAGE_ESTADO_SWITCH_EVENTOS,(void *)&estado,sizeof(estado));
+                }
+            }
+            else
+            {
+                status = PROT_ERROR_INCORRECT_PARAM_SIZE; //Devuelve un error
+            }
         }
 
         break;
@@ -310,6 +390,11 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
 //*****************************************************************************
 int main(void)
 {
+    cola_freertos = xQueueCreate(16,sizeof(uint32_t));
+    if(cola_freertos == NULL){
+        while(1);
+    }
+
 	//
 	// Set the clocking to run at 40 MHz from the PLL.
 	//
@@ -384,4 +469,21 @@ int main(void)
 	{
 		//Si llego aqui es que algo raro ha pasado
 	}
+}
+
+void GPIOFIntHandler(void){
+
+    BaseType_t higherPriorityTaskWoken=pdFALSE; //Hay que inicializarlo a False!!
+    //Lee el estado del puerto (activos a nivel bajo)
+
+    // pasamos el estado de los pines cuando se produjo la interrupcion
+    int32_t i32PinStatus=MAP_GPIOPinRead(GPIO_PORTF_BASE,ALL_BUTTONS);
+
+    //FromISR porque estoy en un rutina de tratamiento de interrupción
+    // Pasamos un valor por referencia,
+    xQueueSendFromISR (cola_freertos,&i32PinStatus,&higherPriorityTaskWoken);   //Escribe en la cola freeRTOS
+    MAP_GPIOIntClear(GPIO_PORTF_BASE,ALL_BUTTONS);
+    // Ahora hay que comprobar si hay que hacer el cambio de contexto
+    //Se puede hacer con CUALQUIERA de las dos lineas siguientes (las dos hacen lo mismo)
+    portEND_SWITCHING_ISR(higherPriorityTaskWoken);
 }
