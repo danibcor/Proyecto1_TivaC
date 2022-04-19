@@ -129,19 +129,26 @@ static portTASK_FUNCTION(Switch2Task,pvParameters)
     {
         if (xQueueReceive(cola_freertos,&ui32Status,portMAX_DELAY) == pdTRUE){
 
-            if(ui32Status == 0){
+            if(ui32Status == 0)
+            {
                 UARTprintf("Switch 1 y Switch 2 pulsados\r\n");
                 estado.switch1 = 0;
                 estado.switch2 = 0;
-            }else if (!(ui32Status & LEFT_BUTTON)){
+            }
+            else if (!(ui32Status & LEFT_BUTTON))
+            {
                 UARTprintf("Switch 1 pulsado\r\n");
                 estado.switch1 = 0;
                 estado.switch2 = 1;
-            }else if (!(ui32Status & RIGHT_BUTTON)){
+            }
+            else if (!(ui32Status & RIGHT_BUTTON))
+            {
                 UARTprintf("Switch 2 pulsado\r\n");
                 estado.switch2 = 0;
                 estado.switch1 = 1;
-            }else{
+            }
+            else
+            {
                 UARTprintf("Switch 1 o Switch 2 no pulsado\r\n");
                 estado.switch2 = 1;
                 estado.switch1 = 1;
@@ -153,7 +160,6 @@ static portTASK_FUNCTION(Switch2Task,pvParameters)
         }
     }
 }
-
 
 //Para especificacion 2. Esta tarea no tendria por que ir en main.c
 static portTASK_FUNCTION(ADCTask,pvParameters)
@@ -267,8 +273,8 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
 
         break;
 
-      case MESSAGE_LED_PWM_BRIGHTNESS:
-      {
+        case MESSAGE_LED_PWM_BRIGHTNESS:
+        {
             MESSAGE_LED_PWM_BRIGHTNESS_PARAMETER parametro;
 
             if (check_and_extract_command_param(parameters, parameterSize, &parametro, sizeof(parametro))>0)
@@ -292,30 +298,29 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
             {
                 UARTprintf("Llegan mensajes para comprobar estados de los switches...\r\n");
 
-                if((GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4) == 0) && (GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_0) == 0)){
-
+                if((GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4) == 0) && (GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_0) == 0))
+                {
                     UARTprintf("Switch 1 y Switch 2 pulsados\r\n");
                     estado.switch1 = 0;
                     estado.switch2 = 0;
-
-                }else if(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4) == 0){
-
+                }
+                else if(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4) == 0)
+                {
                     UARTprintf("Switch 1 pulsado\r\n");
                     estado.switch1 = 0;
                     estado.switch2 = 1;
-
-                }else if(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_0) == 0){
-
+                }
+                else if(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_0) == 0)
+                {
                     UARTprintf("Switch 2 pulsado\r\n");
                     estado.switch2 = 0;
                     estado.switch1 = 1;
-
-                }else{
-
+                }
+                else
+                {
                     UARTprintf("Switch 1 o Switch 2 no pulsado\r\n");
                     estado.switch2 = 1;
                     estado.switch1 = 1;
-
                 }
 
                 //Envia el mensaje hacia QT
@@ -336,7 +341,8 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
 
             if (check_and_extract_command_param(parameters, parameterSize, &estado, sizeof(estado)) > 0)
             {
-                if(botonPulsado == 0){
+                if(botonPulsado == 0)
+                {
 
                     botonPulsado = 1;
 
@@ -349,7 +355,9 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
                     {
                         while(1);
                     }
-                }else{
+                }
+                else
+                {
                     botonPulsado = 0;
                     // Deshabilitamos las interrupciones de los switches
                     IntDisable(INT_GPIOF);
@@ -373,7 +381,7 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
 
         break;
 
-       default:
+        default:
            //mensaje desconocido/no implementado
            status=PROT_ERROR_UNIMPLEMENTED_COMMAND; //Devuelve error.
     }
@@ -391,20 +399,18 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
 int main(void)
 {
     cola_freertos = xQueueCreate(16,sizeof(uint32_t));
-    if(cola_freertos == NULL){
+    if(cola_freertos == NULL)
+    {
         while(1);
     }
 
 	//
 	// Set the clocking to run at 40 MHz from the PLL.
-	//
-	MAP_SysCtlClockSet(SYSCTL_SYSDIV_5 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
-			SYSCTL_OSC_MAIN);	//Ponermos el reloj principal a 40 MHz (200 Mhz del Pll dividido por 5)
-
+    //Ponermos el reloj principal a 40 MHz (200 Mhz del Pll dividido por 5)
+	MAP_SysCtlClockSet(SYSCTL_SYSDIV_5 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ | SYSCTL_OSC_MAIN);
 
 	// Get the system clock speed.
 	g_ulSystemClock = SysCtlClockGet();
-
 
 	//Habilita el clock gating de los perifericos durante el bajo consumo --> perifericos que se desee activos en modo Sleep
 	//                                                                        deben habilitarse con SysCtlPeripheralSleepEnable
@@ -471,7 +477,8 @@ int main(void)
 	}
 }
 
-void GPIOFIntHandler(void){
+void GPIOFIntHandler(void)
+{
 
     BaseType_t higherPriorityTaskWoken=pdFALSE; //Hay que inicializarlo a False!!
     //Lee el estado del puerto (activos a nivel bajo)
