@@ -1,4 +1,4 @@
-#include "mainusergui.h"
+﻿#include "mainusergui.h"
 #include "ui_mainusergui.h"
 #include <QSerialPort>      // Comunicacion por el puerto serie
 #include <QSerialPortInfo>  // Comunicacion por el puerto serie
@@ -175,6 +175,8 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
             MESSAGE_ADC_SAMPLE_PARAMETER parametro;
             if (check_and_extract_command_param(datos.data(), datos.size(), &parametro, sizeof(parametro))>0)
             {
+                // La cuenta que se hace es para pasarlo a voltios, se multiplica por VCC de 3.3
+                // y se divido entre 4096 porque es un convertidor de 12 bits
                 ui->lcdCh1->display(((double)parametro.chan1)*3.3/4096.0);
                 ui->lcdCh2->display(((double)parametro.chan2)*3.3/4096.0);
                 ui->lcdCh3->display(((double)parametro.chan3)*3.3/4096.0);
@@ -194,16 +196,27 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
 
             if (check_and_extract_command_param(datos.data(), datos.size(), &estado, sizeof(estado)) > 0)
             {
-                if(estado.switch1 == 0 && estado.switch2 == 0){ // Switch 1 y Switch 2 pulsados, encendemos los 2 leds
+                // Switch 1 y Switch 2 pulsados, encendemos los 2 leds
+                if(estado.switch1 == 0 && estado.switch2 == 0)
+                {
                     ui->led_rojo->setChecked(1);
                     ui->led_azul->setChecked(1);
-                }else if(estado.switch1 == 0 && estado.switch2 == 1){ // Switch 1 pulsado y el Switch 2 no, enciendo el led rojo
+                }
+                else if(estado.switch1 == 0)
+                // Switch 1 pulsado y el Switch 2 no, enciendo el led rojo
+                {
                     ui->led_rojo->setChecked(1);
                     ui->led_azul->setChecked(0);
-                }else if(estado.switch2 == 0){ // Switch 2 pulsado y el Switch 1 no, enciendo el led azul
+                }
+                // Switch 2 pulsado y el Switch 1 no, enciendo el led azul
+                else if(estado.switch2 == 0)
+                {
                     ui->led_azul->setChecked(1);
                     ui->led_rojo->setChecked(0);
-                }else{ // Switch 2 o Switch 1 no pulsado, apago los 2 leds
+                }
+                // Switch 2 o Switch 1 no pulsado, apago los 2 leds
+                else
+                {
                     ui->led_rojo->setChecked(0);
                     ui->led_azul->setChecked(0);
                 }
@@ -222,16 +235,27 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
 
             if (check_and_extract_command_param(datos.data(), datos.size(), &estado, sizeof(estado)) > 0)
             {
-                if(estado.switch1 == 0 && estado.switch2 == 0){ // Switch 1 y Switch 2 pulsados, encendemos los 2 leds
+                // Switch 1 y Switch 2 pulsados, encendemos los 2 leds
+                if(estado.switch1 == 0 && estado.switch2 == 0)
+                {
                     ui->led_rojo_evento->setChecked(1);
                     ui->led_azul_evento->setChecked(1);
-                }else if(estado.switch1 == 0 && estado.switch2 == 1){ // Switch 1 pulsado y el Switch 2 no, enciendo el led rojo
+                }
+                // Switch 1 pulsado y el Switch 2 no, enciendo el led rojo
+                else if(estado.switch1 == 0)
+                {
                     ui->led_rojo_evento->setChecked(1);
                     ui->led_azul_evento->setChecked(0);
-                }else if(estado.switch2 == 0){ // Switch 2 pulsado y el Switch 1 no, enciendo el led azul
+                }
+                // Switch 2 pulsado y el Switch 1 no, enciendo el led azul
+                else if(estado.switch2 == 0)
+                {
                     ui->led_azul_evento->setChecked(1);
                     ui->led_rojo_evento->setChecked(0);
-                }else{ // Switch 2 o Switch 1 no pulsado, apago los 2 leds
+                }
+                // Switch 2 o Switch 1 no pulsado, apago los 2 leds
+                else
+                {
                     ui->led_rojo_evento->setChecked(0);
                     ui->led_azul_evento->setChecked(0);
                 }
@@ -280,6 +304,7 @@ void MainUserGUI::tivaStatusChanged(int status,QString message)
         break;
 
         case TivaRemoteLink::FragmentedPacketError:
+
         case TivaRemoteLink::CRCorStuffError:
             //Errores detectados en la recepcion de paquetes
             ui->statusLabel->setText(message);
@@ -295,9 +320,12 @@ void MainUserGUI::cambiaMODO()
 {
     MESSAGE_MODE_PARAMETER modo;
 
-    if(ui->PWM_GPIO->isChecked()){
+    if(ui->PWM_GPIO->isChecked())
+    {
         modo.modotx = 1;
-    }else{
+    }
+    else
+    {
         modo.modotx = 0;
     }
 
@@ -326,7 +354,8 @@ void MainUserGUI::comprobarEstado()
 {
     MESSAGE_ESTADO_SWITCH_PARAMETER estado;
 
-    if(ui->botonEstado->isChecked()){
+    if(ui->botonEstado->isChecked())
+    {
         tiva.sendMessage(MESSAGE_ESTADO_SWITCH,QByteArray::fromRawData((char *)&estado,sizeof(estado)));
     }
 }
@@ -336,7 +365,8 @@ void MainUserGUI::comprobarEstado_Eventos()
 {
     MESSAGE_ESTADO_SWITCH_EVENTOS_PARAMETER estado;
 
-    if(ui->botonEstado_evento->isChecked()){
+    if(ui->botonEstado_evento->isChecked())
+    {
         tiva.sendMessage(MESSAGE_ESTADO_SWITCH_EVENTOS,QByteArray::fromRawData((char *)&estado,sizeof(estado)));
     }
 }
