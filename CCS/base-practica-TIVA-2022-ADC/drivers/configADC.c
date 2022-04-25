@@ -1,3 +1,9 @@
+// En este archivo se configura el ADC al completo:
+// 1.- Trigger
+// 2.- Inicialización de la secuencia
+// 3.- Recibir de la cola
+// 4.- Interrupción del ADC
+
 #include<stdint.h>
 #include<stdbool.h>
 
@@ -19,91 +25,232 @@
 
 // Al ser una cola static, la cola solo se puede emplear en este fichero
 static QueueHandle_t cola_adc;
+static QueueHandle_t cola_adc2;
 
-//Provoca el disparo de una conversion (hemos configurado el ADC con "disparo software" (Processor trigger)
-void configADC_DisparaADC(void)
+// DISPARO ADC0, Provoca el disparo de una conversion (hemos configurado el ADC con "disparo software" (Processor trigger)
+void configADC0_DisparaADC(void)
 {
-	ADCProcessorTrigger(ADC0_BASE,1);
+	ADCProcessorTrigger(ADC0_BASE,0);
 }
 
-
-void configADC_IniciaADC(void)
+void configADC1_ConfigTimer(uint8_t control, double val)
 {
-			    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
-			    // Especificamos que el periferico siga encendido en modo de bajo consumo
-			    SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_ADC0);
 
-				//HABILITAMOS EL GPIOE, GPIOB y GPIOD
-			    // Para configurar el multiplexor de señales
-				SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE | SYSCTL_PERIPH_GPIOB | SYSCTL_PERIPH_GPIOD);
-				SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_GPIOE | SYSCTL_PERIPH_GPIOB | SYSCTL_PERIPH_GPIOD);
+    //DESACTIVAR, botón de cambio de frecuencia no pulsado
+    if (control == 0)
+    {
+        //Desactivo la Secuencia
+        ADCSequenceDisable(ADC1_BASE, 0);
 
-				// Enable pin PE3 for ADC AIN0|AIN1|AIN2|AIN3
-				GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3 | GPIO_PIN_2 | GPIO_PIN_1 | GPIO_PIN_0);
-				// Enable pin PD3 for ADC AIN4
-				GPIOPinTypeADC(GPIO_PORTD_BASE, GPIO_PIN_3);
-				// Enable pin PB5 for ADC AIN11
-				GPIOPinTypeADC(GPIO_PORTB_BASE, GPIO_PIN_5);
+        //Desactiva el disparo ADC del temporizador
+        TimerControlTrigger(TIMER2_BASE, TIMER_A, false);
 
-				//CONFIGURAR SECUENCIADOR 1
-				//ADCSequenceDisable(ADC0_BASE,1);
+        //DesHabilito Timer
+        TimerDisable(TIMER2_BASE, TIMER_A);
 
-				// Vamos a configurar el secuenciador 0 porque admite 8 pasos, nosotros tenemos 6
-				// Secuenciador 0 -> admite 8, Secuenciador 1/2 -> admite 4 y Secuenciador 3 -> admite 1
-				ADCSequenceDisable(ADC0_BASE, 0);
+        // Deshabilitar interrupcion ADC1
+        ADCIntDisable(ADC1_BASE, 0);
 
-				//Configuramos la velocidad de conversion al maximo (1MS/s)
-				// 1us por cada muestra
-				ADCClockConfigSet(ADC0_BASE, ADC_CLOCK_RATE_FULL, 1);
+        // Deshabilitar NVIC
+        IntDisable(INT_ADC1SS0);
+    }
 
-				ADCSequenceConfigure(ADC0_BASE,0,ADC_TRIGGER_PROCESSOR,0);	//Disparo software (processor trigger)
-				ADCSequenceStepConfigure(ADC0_BASE, 0, 0, ADC_CTL_CH0);
-				ADCSequenceStepConfigure(ADC0_BASE, 0, 1, ADC_CTL_CH1);
-				ADCSequenceStepConfigure(ADC0_BASE, 0, 2, ADC_CTL_CH2);
-				ADCSequenceStepConfigure(ADC0_BASE, 0, 3, ADC_CTL_CH3);
-				ADCSequenceStepConfigure(ADC0_BASE, 0, 4, ADC_CTL_CH4);
-				ADCSequenceStepConfigure(ADC0_BASE, 0, 5, ADC_CTL_CH11 | ADC_CTL_IE | ADC_CTL_END);	//La ultima muestra provoca la interrupcion
-				ADCSequenceEnable(ADC0_BASE,1); //ACTIVO LA SECUENCIA
+    //ACTIVAR, botón de cambio de frecuencia pulsado
+    else if (control == 1)
+    {
+        ADCSequenceEnable(ADC1_BASE, 0);
+        TimerControlTrigger(TIMER2_BASE, TIMER_A, 1);
 
-				//Habilita las interrupciones
-				ADCIntClear(ADC0_BASE, 1);
-				ADCIntEnable(ADC0_BASE, 1);
-				IntPrioritySet(INT_ADC0SS1, configMAX_SYSCALL_INTERRUPT_PRIORITY);
-				IntEnable(INT_ADC0SS1);
+        //Cargar el valor que contará el temporizador
+        TimerLoadSet(TIMER2_BASE, TIMER_A, (SysCtlClockGet()/val));
+        TimerEnable(TIMER2_BASE, TIMER_A);
 
-				//Creamos una cola de mensajes para la comunicacion entre la ISR y la tara que llame a configADC_LeeADC(...)
-				cola_adc=xQueueCreate(8,sizeof(MuestrasADC));
-				if (cola_adc==NULL)
-				{
-					while(1);
-				}
+        // Habilitar interrupcion ADC1
+        ADCIntClear(ADC1_BASE, 0);
+        ADCIntEnable(ADC1_BASE, 0);
+
+        // Habilitar interrupcion por parte del NVIC
+        IntPrioritySet(INT_ADC1SS0, configMAX_SYSCALL_INTERRUPT_PRIORITY);
+        IntEnable(INT_ADC1SS0);
+    }
+
+    //CAMBIAR, botón de cambio de frecuencia ya pulsado y sólo cambia frecuencia
+    else if (control == 2)
+    {
+        //DesHabilito Timer
+        TimerDisable(TIMER2_BASE, TIMER_A);
+
+        //Cargar el valor que contará el temporizador
+        TimerLoadSet(TIMER2_BASE, TIMER_A, (SysCtlClockGet()/val));
+        TimerEnable(TIMER2_BASE, TIMER_A);
+
+        // Habilitar interrupcion ADC1
+        ADCIntClear(ADC1_BASE, 0);
+    }
 }
 
-
-void configADC_LeeADC(MuestrasADC *datos)
+void configADC0_IniciaADC0(void)
 {
-	xQueueReceive(cola_adc,datos,portMAX_DELAY);
+    // ADC0 empleado para polling, para los 6 canales
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
+
+    // Especificamos que el periferico siga encendido en modo de bajo consumo
+    SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_ADC0);
+
+    //HABILITAMOS EL GPIOE, GPIOB y GPIOD
+    // Para configurar el multiplexor de señales
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+    SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_GPIOE);
+    SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_GPIOB);
+    SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_GPIOD);
+
+    // Enable pin PE3 for ADC AIN0|AIN1|AIN2|AIN3
+    GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3 | GPIO_PIN_2 | GPIO_PIN_1 | GPIO_PIN_0);
+    // Enable pin PD3 for ADC AIN4
+    GPIOPinTypeADC(GPIO_PORTD_BASE, GPIO_PIN_3);
+    // Enable pin PB5 for ADC AIN11, este será al que conectemos el sensor de intensidad de ruido
+    GPIOPinTypeADC(GPIO_PORTB_BASE, GPIO_PIN_5);
+
+    // CONFIGURAR ADC0, Vamos a configurar el secuenciador 0 porque admite 8 pasos, nosotros tenemos 6
+    // Secuenciador 0 -> admite 8, Secuenciador 1/2 -> admite 4 y Secuenciador 3 -> admite 1
+    ADCSequenceDisable(ADC0_BASE, 0);
+
+    // CONFIGURAR ADC0, Configuramos la velocidad de conversion al maximo (1MS/s)
+    // 1us por cada muestra
+    ADCClockConfigSet(ADC0_BASE, ADC_CLOCK_RATE_FULL, 1);
+
+    //Disparo software (processor trigger)
+    ADCSequenceConfigure(ADC0_BASE, 0, ADC_TRIGGER_PROCESSOR, 0);
+    ADCSequenceStepConfigure(ADC0_BASE, 0, 0, ADC_CTL_CH0);
+    ADCSequenceStepConfigure(ADC0_BASE, 0, 1, ADC_CTL_CH1);
+    ADCSequenceStepConfigure(ADC0_BASE, 0, 2, ADC_CTL_CH2);
+    ADCSequenceStepConfigure(ADC0_BASE, 0, 3, ADC_CTL_CH3);
+    ADCSequenceStepConfigure(ADC0_BASE, 0, 4, ADC_CTL_CH4);
+    //La ultima muestra provoca la interrupcion
+    ADCSequenceStepConfigure(ADC0_BASE, 0, 5, ADC_CTL_CH11 | ADC_CTL_IE | ADC_CTL_END);
+    //ACTIVO LA SECUENCIA
+    ADCSequenceEnable(ADC0_BASE,0);
+
+    //Habilita las interrupciones, ADC0
+    ADCIntClear(ADC0_BASE, 0);
+    ADCIntEnable(ADC0_BASE, 0);
+    IntPrioritySet(INT_ADC0SS0, configMAX_SYSCALL_INTERRUPT_PRIORITY);
+    IntEnable(INT_ADC0SS0);
+
+    //Creamos una cola de mensajes para la comunicacion entre la ISR y la tara que llame a configADC_LeeADC(...)
+    // Se ha modificado las estructuras donde se encuentra definida "MuestraADC"
+    cola_adc = xQueueCreate(12, sizeof(MuestrasADC));
+    if (cola_adc == NULL)
+    {
+        while(1);
+    }
 }
 
-void configADC_ISR(void)
+void configADC1_IniciaADC1(void)
 {
-	portBASE_TYPE higherPriorityTaskWoken=pdFALSE;
+    //Habilitar Temporizador 2
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER2);
+    // Permitimos el funcionamiento del Temporizador 2 en modo de bajo consumo
+    SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_TIMER2);
+    //Configurar temporizador como periódico
+    TimerConfigure(TIMER2_BASE, TIMER_CFG_PERIODIC);
+
+    //Habilitar disparador de ADC por temporizador
+    TimerControlTrigger(TIMER2_BASE, TIMER_A, 1);
+
+    // Habilitar ADC1
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC1);
+    // Permitimos el funcionamiento del ADC1 en modo de bajo consumo
+    SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_ADC1);
+
+    //Habilitar pin de entrada analógica
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+    GPIOPinTypeADC(GPIO_PORTB_BASE, GPIO_PIN_5);
+    GPIOPinTypeGPIOInput(GPIO_PORTB_BASE, GPIO_PIN_5);
+
+    // Configurar secuencia de muestreo
+    ADCSequenceDisable(ADC1_BASE, 0);
+    ADCSequenceConfigure(ADC1_BASE, 0, ADC_TRIGGER_TIMER, 1);
+    ADCSequenceStepConfigure(ADC1_BASE, 0, 0, ADC_CTL_CH11 | ADC_CTL_IE | ADC_CTL_END);
+
+    cola_adc2 = xQueueCreate(16, sizeof(MuestrasADCMicro));
+    if (cola_adc2 == NULL)
+    {
+        while(1);
+    }
+}
+
+void configADC0_LeeADC0(MuestrasADC *datos)
+{
+	xQueueReceive(cola_adc, datos, portMAX_DELAY);
+}
+
+void configADC1_LeeADC1(MuestrasADCMicro *datos)
+{
+    xQueueReceive(cola_adc2, datos, portMAX_DELAY);
+}
+
+void configADC0_ISR(void)
+{
+	portBASE_TYPE higherPriorityTaskWoken = pdFALSE;
 
 	MuestrasLeidasADC leidas;
 	MuestrasADC finales;
-	ADCIntClear(ADC0_BASE,1);//LIMPIAMOS EL FLAG DE INTERRUPCIONES
+	ADCIntClear(ADC0_BASE, 0);//LIMPIAMOS EL FLAG DE INTERRUPCIONES
 
 	// Hay que tener cuidado con el tipo empleado para coger los datos guardados
-	ADCSequenceDataGet(ADC0_BASE,1,(uint32_t *)&leidas);//COGEMOS LOS DATOS GUARDADOS
+	ADCSequenceDataGet(ADC0_BASE, 0, (uint32_t *)&leidas);//COGEMOS LOS DATOS GUARDADOS
 
 	//Pasamos de 32 bits a 16 (el conversor es de 12 bits, así que sólo son significativos los bits del 0 al 11)
 	// valores de entre 0 hasta 4096 ()
-	finales.chan1=leidas.chan1;
-	finales.chan2=leidas.chan2;
-	finales.chan3=leidas.chan3;
-	finales.chan4=leidas.chan4;
+	finales.chan1 = leidas.chan1;
+	finales.chan2 = leidas.chan2;
+	finales.chan3 = leidas.chan3;
+	finales.chan4 = leidas.chan4;
+    finales.chan5 = leidas.chan5;
+    finales.chan6 = leidas.chan6;
 
 	//Guardamos en la cola
-	xQueueSendFromISR(cola_adc,&finales,&higherPriorityTaskWoken);
+	xQueueSendFromISR(cola_adc, &finales, &higherPriorityTaskWoken);
 	portEND_SWITCHING_ISR(higherPriorityTaskWoken);
+}
+
+void configADC1_ISR(void)
+{
+    static uint8_t contador = 0;
+
+    portBASE_TYPE higherPriorityTaskWoken = pdFALSE;
+
+    MuestrasLeidaMicro leida;
+    MuestrasADCMicro final;
+    ADCIntClear(ADC1_BASE, 0);//LIMPIAMOS EL FLAG DE INTERRUPCIONES
+
+    // tomar las 8 secuencias primero tutoria static
+
+    if(contador < 8)
+    {
+        contador++;
+    }
+    else
+    {
+        contador = 0;
+
+        // Hay que tener cuidado con el tipo empleado para coger los datos guardados
+        ADCSequenceDataGet(ADC1_BASE, 0, (uint32_t *)&leida);//COGEMOS LOS DATOS GUARDADOS
+
+        // Pasamos de 32 bits a 16 (el conversor es de 12 bits, así que sólo son significativos los bits del 0 al 11)
+        // valores de entre 0 hasta 4096 ()
+        uint8_t i;
+        for(i = 0;i < 8;i++)
+        {
+            final.chan[i] = leida.chan[i];
+        }
+
+        //Guardamos en la cola
+        xQueueSendFromISR(cola_adc2, &final, &higherPriorityTaskWoken);
+    }
+
+    portEND_SWITCHING_ISR(higherPriorityTaskWoken);
 }

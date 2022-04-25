@@ -35,7 +35,7 @@
 
 #define MINIMUN_FRAME_SIZE (START_SIZE+COMMAND_SIZE+CHECKSUM_SIZE+END_SIZE)
 
-#define MAX_DATA_SIZE (32)
+#define MAX_DATA_SIZE (100) // Por defecto 32, hemos cambiado el valor para incrementar el valor del tamaño del paquete mandado
 #define MAX_FRAME_SIZE (2*(MAX_DATA_SIZE))
 
 //Codigos de Error del protocolo
