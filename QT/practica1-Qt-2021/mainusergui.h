@@ -5,6 +5,8 @@
 #include <QtSerialPort/qserialport.h>
 #include <QMessageBox>
 #include "tiva_remotelink.h"
+#include <qwt_plot_curve.h>
+#include <qwt_plot_grid.h>
 
 namespace Ui {
 class MainUserGUI;
@@ -36,10 +38,24 @@ private slots:
     void on_ADCButton_clicked();
     void on_pingButton_clicked();
 
+    void on_boton_frec_valueChanged(double arg1);
+
+    void on_ADCcheck_clicked();
+
 private:
     // funciones privadas
     void processError(const QString &s);
     void activateRunButton();
+
+    // Variables graficas PB5
+    //valores eje X
+    double xVal[4096];
+    //valores ejes Y
+    double yVal[4096];
+    //Curvas
+    QwtPlotCurve *curva;
+    //Cuadricula
+    QwtPlotGrid  *m_Grid;
 
 private:
     //Componentes privados

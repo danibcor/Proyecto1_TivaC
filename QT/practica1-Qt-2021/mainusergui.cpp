@@ -31,6 +31,36 @@ MainUserGUI::MainUserGUI(QWidget *parent) :  // Constructor de la clase
         }
     }
 
+    //Inicializo Grafica 1
+    ui->graficaPB5->setTitle("ADC PB5");;
+    ui->graficaPB5->setAxisTitle(QwtPlot::xBottom, "Tiempo");
+    ui->graficaPB5->setAxisTitle(QwtPlot::yLeft, "Voltaje");
+    ui->graficaPB5->setAxisScale(QwtPlot::yLeft, 0, 3.5);
+    ui->graficaPB5->setAxisScale(QwtPlot::xBottom,0, 4096.0);
+
+    // Formato de la curva
+    curva = new QwtPlotCurve();
+    curva->attach(ui->graficaPB5);
+
+    for(int i = 0;i < 4096; i++)
+    {
+        xVal[i] = i;
+        yVal[i] = 0;
+    }
+
+    // Inicializa los datos apuntando a bloques de memoria, por eficiencia
+    curva->setRawSamples(xVal, yVal, 4096);
+
+    // Color de la curva
+    curva->setPen(QPen(Qt::red));
+
+    // Rejilla de puntos
+    m_Grid = new QwtPlotGrid();
+    // que se asocia al objeto QwtPl
+    m_Grid->attach(ui->graficaPB5);
+    //Desactiva el autoreplot (mejora la eficiencia)
+    ui->graficaPB5->setAutoReplot(false);
+
     //Inicializa algunos controles
     ui->serialPortComboBox->setFocus();   // Componente del GUI seleccionado de inicio
     ui->pingButton->setEnabled(false);    // Se deshabilita el botón de ping del interfaz gráfico, hasta que
@@ -61,6 +91,12 @@ MainUserGUI::MainUserGUI(QWidget *parent) :  // Constructor de la clase
 
     // Conexion boton de estado switches por eventos
     connect(ui->botonEstado_evento,SIGNAL(clicked()),this,SLOT(comprobarEstado_Eventos()));
+
+    // Conexion boton activar tomas de datos frecuencias de muestreo
+    connect(ui->ADCcheck,SIGNAL(clicked()),this,SLOT(on_ADCcheck_clicked()));
+
+    // Conexion cambio de las frecuencias de muestreo
+    connect(ui->boton_frec,SIGNAL(valueChanged(double)),this,SLOT(on_boton_frec_valueChanged(double)));
 
     //Conectamos Slots del objeto "Tiva" con Slots de nuestra aplicacion (o con widgets)
     connect(&tiva,SIGNAL(statusChanged(int,QString)),this,SLOT(tivaStatusChanged(int,QString)));
@@ -181,6 +217,8 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
                 ui->lcdCh2->display(((double)parametro.chan2)*3.3/4096.0);
                 ui->lcdCh3->display(((double)parametro.chan3)*3.3/4096.0);
                 ui->lcdCh4->display(((double)parametro.chan4)*3.3/4096.0);
+                ui->lcdCh5->display(((double)parametro.chan5)*3.3/4096.0);
+                ui->lcdCh6->display(((double)parametro.chan6)*3.3/4096.0);
             }
             else
             {   //Si el tamanho de los datos no es correcto emito la senhal statusChanged(...) para reportar un error
@@ -188,6 +226,35 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
             }
 
         }
+        break;
+
+        case MESSAGE_64_MUESTRAS:
+        {    // Este caso trata la recepcion de datos del ADC desde la TIVA
+            MESSAGE_64_MUESTRAS_PARAMETER parametros;
+            if (check_and_extract_command_param(datos.data(), datos.size(), &parametros, sizeof(parametros)) > 0)
+            {
+                // La cuenta que se hace es para pasarlo a voltios, se multiplica por VCC de 3.3
+                // y se divido entre 4096 porque es un convertidor de 12 bits
+                ui->lcd_micro->display(((double)parametros.valor[0])*3.3/4096.0);
+
+                int i;
+                for(i = 0;i < 4096-64;i++)
+                {
+                    yVal[i] = yVal[i + 64];
+                }
+                for(i = 0;i < 64;i++)
+                {
+                    yVal[4032 + i] = ((double)parametros.valor[i]*3.3)/4096.0;
+                }
+                ui->graficaPB5->replot();
+            }
+            else
+            {   //Si el tamanho de los datos no es correcto emito la senhal statusChanged(...) para reportar un error
+                ui->statusLabel->setText(tr("Error al recibir 64 muestras"));
+            }
+
+        }
+
         break;
 
         case MESSAGE_ESTADO_SWITCH:
@@ -330,7 +397,6 @@ void MainUserGUI::cambiaMODO()
     }
 
     tiva.sendMessage(MESSAGE_MODE,QByteArray::fromRawData((char *)&modo,sizeof(modo)));
-
 }
 
 
@@ -353,21 +419,43 @@ void MainUserGUI::colorWheel_cambiaRGB(const QColor &arg1)
 void MainUserGUI::comprobarEstado()
 {
     MESSAGE_ESTADO_SWITCH_PARAMETER estado;
-
-    if(ui->botonEstado->isChecked())
-    {
-        tiva.sendMessage(MESSAGE_ESTADO_SWITCH,QByteArray::fromRawData((char *)&estado,sizeof(estado)));
-    }
+    tiva.sendMessage(MESSAGE_ESTADO_SWITCH,QByteArray::fromRawData((char *)&estado,sizeof(estado)));
 }
-
 
 void MainUserGUI::comprobarEstado_Eventos()
 {
     MESSAGE_ESTADO_SWITCH_EVENTOS_PARAMETER estado;
-
-    if(ui->botonEstado_evento->isChecked())
-    {
-        tiva.sendMessage(MESSAGE_ESTADO_SWITCH_EVENTOS,QByteArray::fromRawData((char *)&estado,sizeof(estado)));
-    }
+    tiva.sendMessage(MESSAGE_ESTADO_SWITCH_EVENTOS,QByteArray::fromRawData((char *)&estado,sizeof(estado)));
 }
 
+// Boton para activar el cambio de la frecuencia de muestreo
+void MainUserGUI::on_ADCcheck_clicked()
+{
+    MESSAGE_ACTIVAR_MUESTREO_PARAMETER parametro;
+
+    if(ui->ADCcheck->isChecked())
+    {
+        parametro.activar = 1;
+        parametro.valor = ui->boton_frec->value();
+    }
+    else
+    {
+        parametro.activar = 0;
+        parametro.valor = -1;
+    }
+
+    tiva.sendMessage(MESSAGE_ACTIVAR_MUESTREO, QByteArray::fromRawData((char *)&parametro, sizeof(parametro)));
+}
+
+
+// Boton para cambiar la frecuencia de muestreo
+void MainUserGUI::on_boton_frec_valueChanged(double arg1)
+{
+    // Sólo mandaremos el mensaje de cambio de la frecuencia si el botón de activar el cambio de frecuencia se encutra activo
+    if(ui->ADCcheck->isChecked())
+    {
+        MESSAGE_FRECUENCIA_MUESTREO_PARAMETER valor_frec;
+        valor_frec.valor = arg1;
+        tiva.sendMessage(MESSAGE_FRECUENCIA_MUESTREO, QByteArray::fromRawData((char *)&valor_frec, sizeof(valor_frec)));
+    }
+}

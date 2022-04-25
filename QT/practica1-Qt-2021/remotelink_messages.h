@@ -1,18 +1,11 @@
-/*
- * remotelink_messages.h
- *
- *  Created on: March. 2019
- *
- */
-
-
 #ifndef RL_MESSAGES_H
 #define RL_MESSAGES_H
-//Codigos de los mensajes y definicion de parametros para el protocolo RPC
 
+//Codigos de los mensajes y definicion de parametros para el protocolo RPC
 // El estudiante debe agregar aqui cada nuevo mensaje que implemente. IMPORTANTE el orden de los mensajes
 // debe SER EL MISMO aqui, y en el codigo equivalente en la parte del microcontrolador (Code Composer)
 
+#include <cstdint>
 typedef enum {
     MESSAGE_REJECTED,
     MESSAGE_PING,
@@ -23,13 +16,28 @@ typedef enum {
     MESSAGE_RGB,
     MESSAGE_ESTADO_SWITCH,
     MESSAGE_ESTADO_SWITCH_EVENTOS,
-    //etc, etc...
+    MESSAGE_ACTIVAR_MUESTREO,
+    MESSAGE_FRECUENCIA_MUESTREO,
+    MESSAGE_64_MUESTRAS,
 } messageTypes;
 
 //Estructuras relacionadas con los parametros de los mensahes. El estuadiante debera crear las
 // estructuras adecuadas a los comandos usados, y asegurarse de su compatibilidad en ambos extremos
 
 #pragma pack(1) //Cambia el alineamiento de datos en memoria a 1 byte.
+
+typedef struct{
+    uint16_t valor[64];                 // PPP: Hace falta inicializar array? (Al recibir el mensaje)
+} MESSAGE_64_MUESTRAS_PARAMETER;
+
+typedef struct{
+    uint8_t activar;
+    double valor;
+} MESSAGE_ACTIVAR_MUESTREO_PARAMETER;
+
+typedef struct{
+    double valor;
+} MESSAGE_FRECUENCIA_MUESTREO_PARAMETER;
 
 typedef struct{
     uint8_t switch1;
@@ -75,6 +83,8 @@ typedef struct
     uint16_t chan2;
     uint16_t chan3;
     uint16_t chan4;
+    uint16_t chan5;
+    uint16_t chan6;
 } MESSAGE_ADC_SAMPLE_PARAMETER;
 
 #pragma pack()  //...Pero solo para los comandos que voy a intercambiar, no para el resto.
