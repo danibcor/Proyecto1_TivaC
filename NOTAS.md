@@ -2,6 +2,13 @@
 
 DUDA:
 - ¿Usamos siempre antirrebote?
+- Hace falta max y min?:
+<br/> ui->sampleRate->setMinimum(deviceInfo.minimumSampleRate());
+<br/> ui->sampleRate->setMaximum(deviceInfo.maximumSampleRate());
+- ¿Que hace MAX_SAMPLES_SOUND? ¿Es necesaria a la hora de hacer 'write'?
+
+BUGS:
+- Si activamos la toma de datos antes de 'LeeADC' no va.
 
 
 CAMBIOS 25/04
