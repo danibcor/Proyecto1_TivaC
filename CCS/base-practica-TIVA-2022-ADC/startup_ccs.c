@@ -105,8 +105,8 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // PWM Generator 1
     IntDefaultHandler,                      // PWM Generator 2
     IntDefaultHandler,                      // Quadrature Encoder 0
-    IntDefaultHandler,                      // ADC Sequence 0
-    configADC_ISR,                      // ADC Sequence 1
+    configADC0_ISR,                         // ADC Sequence 0
+    IntDefaultHandler,                      // ADC Sequence 1
     IntDefaultHandler,                      // ADC Sequence 2
     IntDefaultHandler,                      // ADC Sequence 3
     IntDefaultHandler,                      // Watchdog timer
@@ -121,7 +121,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // Analog Comparator 2
     IntDefaultHandler,                      // System Control (PLL, OSC, BO)
     IntDefaultHandler,                      // FLASH Control
-    GPIOFIntHandler,                      // GPIO Port F
+    GPIOFIntHandler,                        // GPIO Port F
     IntDefaultHandler,                      // GPIO Port G
     IntDefaultHandler,                      // GPIO Port H
     IntDefaultHandler,                      // UART2 Rx and Tx
@@ -139,7 +139,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // PWM Generator 3
     IntDefaultHandler,                      // uDMA Software Transfer
     IntDefaultHandler,                      // uDMA Error
-    IntDefaultHandler,                      // ADC1 Sequence 0
+    configADC1_ISR,                         // ADC1 Sequence 0
     IntDefaultHandler,                      // ADC1 Sequence 1
     IntDefaultHandler,                      // ADC1 Sequence 2
     IntDefaultHandler,                      // ADC1 Sequence 3
@@ -290,10 +290,11 @@ NmiSR(void)
 static void
 FaultISR(void)
 {
+    volatile int i = 1;
     //
     // Enter an infinite loop.
     //
-    while(1)
+    while(i)
     {
     }
 }
@@ -308,10 +309,11 @@ FaultISR(void)
 static void
 IntDefaultHandler(void)
 {
+    volatile int i = 1;
     //
     // Go into an infinite loop.
     //
-    while(1)
+    while(i)
     {
     }
 }

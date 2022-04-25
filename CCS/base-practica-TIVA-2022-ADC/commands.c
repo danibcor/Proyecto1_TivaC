@@ -1,12 +1,3 @@
-//*****************************************************************************
-//
-// commands.c - FreeRTOS porting example on CCS4
-//
-// Este fichero contiene errores que seran explicados en clase
-//
-//*****************************************************************************
-
-
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -303,9 +294,9 @@ static int Cmd_rgb(int argc, char *argv[])
 	}
 	else
 	{
-		arrayRGB[0]=strtoul(argv[1], NULL, 10)<<8;
-		arrayRGB[1]=strtoul(argv[2], NULL, 10)<<8;
-		arrayRGB[2]=strtoul(argv[3], NULL, 10)<<8;
+		arrayRGB[0]=strtoul(argv[1], NULL, 10) << 8;
+		arrayRGB[1]=strtoul(argv[2], NULL, 10) << 8;
+		arrayRGB[2]=strtoul(argv[3], NULL, 10) << 8;
 
 		if ((arrayRGB[0]>=65535)||(arrayRGB[1]>=65535)||(arrayRGB[2]>=65535))
 		{
@@ -331,19 +322,19 @@ static int Cmd_rgb(int argc, char *argv[])
 //No es muy elegante, pero es lo que ha implementado Texas Instruments.
 tCmdLineEntry g_psCmdTable[] =
 {
-    { "help",     Cmd_help,      "     : Lista de comandos" },
-    { "?",        Cmd_help,      "        : lo mismo que help" },
-    { "cpu",      Cmd_cpu,       "      : Muestra el uso de  CPU " },
-    { "led",  	  Cmd_led,       "      : Apaga y enciende el led verde" },
-    { "mode",  	  Cmd_mode,       "      : Cambia los pines PF1, PF2 y PF3 entre modo GPIO y modo PWM (rgb)" },
-    { "rgb",  	  Cmd_rgb,       "      : Establece el color RGB" },
-    { "intensity",      Cmd_intensity,       "      : Cambia el nivel de intensidad" },
-    { "free",     Cmd_free,      "     : Muestra la memoria libre" },
+    { "help", Cmd_help, "\t\t: Lista de comandos" },
+    { "?", Cmd_help, "\t\t: Lista de comandos (igual que help)" },
+    { "cpu", Cmd_cpu, "\t\t: Muestra el uso de  CPU" },
+    { "led", Cmd_led, "\t\t: Apaga y enciende el led verde" },
+    { "mode", Cmd_mode, "\t\t: Cambia los pines PF1, PF2 y PF3 entre modo GPIO y modo PWM (rgb)" },
+    { "rgb", Cmd_rgb, "\t\t: Establece el color RGB" },
+    { "intensity", Cmd_intensity, "\t\t: Cambia el nivel de intensidad" },
+    { "free", Cmd_free, "\t\t: Muestra la memoria libre" },
 #if ( configUSE_TRACE_FACILITY == 1 )
-	{ "tasks",    Cmd_tasks,     "    : Muestra informacion de las tareas" },
+	{ "tasks", Cmd_tasks, "\t\t: Muestra informacion de las tareas" },
 #endif
 #if (configGENERATE_RUN_TIME_STATS)
-	{ "stats",    Cmd_stats,      "     : Muestra estadisticas de las tareas" },
+	{ "stats", Cmd_stats, "\t\t: Muestra estadisticas de las tareas" },
 #endif
     { 0, 0, 0 }
 };
@@ -412,8 +403,6 @@ static void vCommandTask( void *pvParameters )
 
 	}
 }
-
-
 
 
 //
