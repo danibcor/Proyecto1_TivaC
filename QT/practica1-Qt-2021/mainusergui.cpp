@@ -31,7 +31,35 @@ MainUserGUI::MainUserGUI(QWidget *parent) :  // Constructor de la clase
         }
     }
 
-    //Inicializo Grafica 1
+
+
+    /*
+     * ESPECIFICACION 4.3 PARA EL CONTROL DE AUDIO
+     */
+
+    //Este objeto es necesario para poder gestionar los dispositivos multimedia.
+    m_devices = new QMediaDevices(this);
+
+    // Inicializo combobox con los dispositivos de salida de audio.
+    const QAudioDevice &defaultDeviceInfo = m_devices->defaultAudioOutput();
+    ui->AudioDevices->addItem(defaultDeviceInfo.description(), QVariant::fromValue(defaultDeviceInfo));
+    for(auto &deviceInfo: m_devices->audioOutputs())
+    {
+        if(deviceInfo != defaultDeviceInfo)
+        {
+            ui->AudioDevices->addItem(deviceInfo.description(), QVariant::fromValue(deviceInfo));
+        }
+    }
+
+    // Deshabilitar el boton de reproducir audio al iniciar el programa (ADC_CKECK estará desactivado)
+    ui->PLAY->setDisabled(true);
+
+
+    /*
+     * ESPECIFICACION 4.2 PARA GRAFICAR
+     */
+
+    // Inicializo Grafica 1
     ui->graficaPB5->setTitle("ADC PB5");;
     ui->graficaPB5->setAxisTitle(QwtPlot::xBottom, "Tiempo");
     ui->graficaPB5->setAxisTitle(QwtPlot::yLeft, "Voltaje");
@@ -231,6 +259,8 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
         case MESSAGE_64_MUESTRAS:
         {    // Este caso trata la recepcion de datos del ADC desde la TIVA
             MESSAGE_64_MUESTRAS_PARAMETER parametros;
+            double valor_frec = ui->boton_frec->value();
+
             if (check_and_extract_command_param(datos.data(), datos.size(), &parametros, sizeof(parametros)) > 0)
             {
                 // La cuenta que se hace es para pasarlo a voltios, se multiplica por VCC de 3.3
@@ -238,6 +268,7 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
                 ui->lcd_micro->display(((double)parametros.valor[0])*3.3/4096.0);
 
                 int i;
+
                 for(i = 0;i < 4096-64;i++)
                 {
                     yVal[i] = yVal[i + 64];
@@ -247,6 +278,28 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
                     yVal[4032 + i] = ((double)parametros.valor[i]*3.3)/4096.0;
                 }
                 ui->graficaPB5->replot();
+
+
+                if(ui->PLAY->isChecked())
+                {
+                    int j;
+
+                    for(j = 0;j < 3;j++)
+                    {
+                        for(i = 0;i < 64; i++)
+                        {
+                            sonido[(64 * contador) + i] = parametros.valor[i];
+                        }
+
+                        contador++;
+                    }
+
+                    if(contador == 9)
+                    {
+                        m_device->write((char *)sonido, sizeof(uint16_t) * MAX_SAMPLES_SOUND);
+                        contador = 0;
+                    }
+                }
             }
             else
             {   //Si el tamanho de los datos no es correcto emito la senhal statusChanged(...) para reportar un error
@@ -375,6 +428,7 @@ void MainUserGUI::tivaStatusChanged(int status,QString message)
         case TivaRemoteLink::CRCorStuffError:
             //Errores detectados en la recepcion de paquetes
             ui->statusLabel->setText(message);
+
         break;
 
         default:
@@ -437,11 +491,19 @@ void MainUserGUI::on_ADCcheck_clicked()
     {
         parametro.activar = 1;
         parametro.valor = ui->boton_frec->value();
+
+        // Habilitar el boton de reproducir audio
+        ui->PLAY->setDisabled(false);
     }
     else
     {
         parametro.activar = 0;
         parametro.valor = -1;
+
+        // Desmarcar el boton de reproducir audio, NOTA: También se entra en la funcion y desactiva el audio
+        ui->PLAY->setChecked(false);
+        // Deshabilitar el boton de reproducir audio
+        ui->PLAY->setDisabled(true);
     }
 
     tiva.sendMessage(MESSAGE_ACTIVAR_MUESTREO, QByteArray::fromRawData((char *)&parametro, sizeof(parametro)));
@@ -457,5 +519,98 @@ void MainUserGUI::on_boton_frec_valueChanged(double arg1)
         MESSAGE_FRECUENCIA_MUESTREO_PARAMETER valor_frec;
         valor_frec.valor = arg1;
         tiva.sendMessage(MESSAGE_FRECUENCIA_MUESTREO, QByteArray::fromRawData((char *)&valor_frec, sizeof(valor_frec)));
+
+
+        /*
+         *     CONFIGURACION DEL DISPOSITIVO DE AUDIO AL CAMBIA DE FRECUENCIA
+         */
+
+        if(arg1 < 4000)
+        {
+            // Desmarcar el boton de reproducir audio, NOTA: También se entra en la funcion y desactiva el audio
+            ui->PLAY->setChecked(false);
+            // Deshabilitar el boton de reproducir audio
+            ui->PLAY->setDisabled(true);
+        }
+        else
+        {
+            // Habilitar el boton de reproducir audio
+            ui->PLAY->setDisabled(false);
+        }
+
+        if(ui->PLAY->isChecked())
+        {
+            const QAudioDevice &deviceInfo = ui->AudioDevices->currentData().value<QAudioDevice>();
+
+            //Destruye el QAudioSink anterior si estaba creado
+            if (m_audioOutput != nullptr)
+            {
+                delete m_audioOutput;
+                m_audioOutput = nullptr;
+            }
+
+            //Crea un nuevo QAudioSink con los nuevos parámetros.
+            QAudioFormat desiredFormat;
+            desiredFormat.setChannelCount(1);
+            desiredFormat.setSampleFormat(QAudioFormat::Int16);
+
+            desiredFormat.setSampleRate(arg1); //Frecuencia de muestreo, multiplicamos por 3 para aumentar la frecuencia  y tener mínimo 12kHz
+
+            if (!deviceInfo.isFormatSupported(desiredFormat))
+            {
+                ui->statusLabel->setText("AA Raw audio format not supported by backend, cannot play audio.");
+                return;
+             }
+
+             m_audioOutput = new QAudioSink(deviceInfo, desiredFormat);
+        }
     }
 }
+
+// Este slot se ejecuta al seleccionar un nuevo dispositivo de audio para reproducción (o al inicializar la lista de dispositivos)
+void MainUserGUI::on_AudioDevices_currentIndexChanged(int index)
+{
+    const QAudioDevice &deviceInfo = ui->AudioDevices->currentData().value<QAudioDevice>();
+
+    //Si ya se había inicializado el dispositivo de audio (se ha cambiado a otro) se libera el anterior
+    if (m_audioOutput != nullptr)
+    {
+      delete m_audioOutput;
+      m_audioOutput = nullptr;
+    }
+
+    // Inicializa el nuevo dispositivo de audio seleccionado y configura el formato
+    QAudioFormat desiredFormat;
+    desiredFormat.setChannelCount(1); //1 Canal
+    desiredFormat.setSampleFormat(QAudioFormat::Int16); //Formato entero de 16bits con signo.
+
+    desiredFormat.setSampleRate(ui->boton_frec->value()); //Frecuencia de muestreo, multiplicamos por 3 para aumentar la frecuencia  y tener mínimo 12kHz
+
+    if(!deviceInfo.isFormatSupported(desiredFormat))
+    {
+      ui->statusLabel->setText("BB Raw audio format not supported by backend, cannot play audio.");
+      return;
+    }
+
+    m_audioOutput = new QAudioSink(deviceInfo, desiredFormat); //Crea el QAudioSink con el formato deseado
+}
+
+
+void MainUserGUI::on_PLAY_toggled(bool checked)
+{
+    if(checked)
+    {
+        // Deshabilitar el cambio de frecuencia mientras se reproduce el audio
+        ui->boton_frec->setDisabled(true);
+        //Arranca la reproducción , obteniendo un QIODevice donde enviar las muestras ("modo PUSH de QAudioSink")
+        m_device = m_audioOutput->start();
+    }
+    else
+    {
+        // Habilitar el cambio de frecuencia tras dejar de reproducir el audio
+        ui->boton_frec->setDisabled(false);
+        //Detiene la reproducción de Audio.
+        m_audioOutput->stop();
+    }
+}
+

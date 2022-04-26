@@ -4,6 +4,9 @@
 #include <QWidget>
 #include <QtSerialPort/qserialport.h>
 #include <QMessageBox>
+#include <QMediaDevices>
+#include <QAudioSink>
+#include <QIODevice>
 #include "tiva_remotelink.h"
 #include <qwt_plot_curve.h>
 #include <qwt_plot_grid.h>
@@ -11,6 +14,8 @@
 namespace Ui {
 class MainUserGUI;
 }
+
+#define MAX_SAMPLES_SOUND 576 // 3 paquetes, multiplicamos por 3 cada posicion 3 * 3 = 9, 64 * 9 = 576
 
 class MainUserGUI : public QWidget
 {
@@ -42,6 +47,10 @@ private slots:
 
     void on_ADCcheck_clicked();
 
+    void on_AudioDevices_currentIndexChanged(int index);
+
+    void on_PLAY_toggled(bool checked);
+
 private:
     // funciones privadas
     void processError(const QString &s);
@@ -63,6 +72,13 @@ private:
     int transactionCount;
     QMessageBox ventanaPopUp;
     TivaRemoteLink tiva; //Objeto para gestionar la comunicacion de mensajes con el microcontrolador
+
+    QMediaDevices *m_devices = nullptr;
+    QAudioSink *m_audioOutput = nullptr ;
+    QIODevice *m_device = nullptr;
+
+    uint8_t contador = 0;
+    uint16_t sonido[MAX_SAMPLES_SOUND];
 
 };
 

@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui serialport widgets svg
+QT       += core gui serialport widgets svg multimedia
 
 TARGET = practica1
 TEMPLATE = app

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>868</width>
-    <height>468</height>
+    <width>1096</width>
+    <height>518</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,8 +18,8 @@
     <rect>
      <x>10</x>
      <y>10</y>
-     <width>851</width>
-     <height>421</height>
+     <width>1071</width>
+     <height>461</height>
     </rect>
    </property>
    <property name="currentIndex">
@@ -32,8 +32,8 @@
     <widget class="QWidget" name="layoutWidget">
      <property name="geometry">
       <rect>
-       <x>610</x>
-       <y>20</y>
+       <x>740</x>
+       <y>30</y>
        <width>211</width>
        <height>341</height>
       </rect>
@@ -272,7 +272,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>280</y>
+       <y>310</y>
        <width>481</width>
        <height>80</height>
       </rect>
@@ -618,6 +618,9 @@ p, li { white-space: pre-wrap; }
         <property name="maximum">
          <double>16000.000000000000000</double>
         </property>
+        <property name="value">
+         <double>13000.000000000000000</double>
+        </property>
        </widget>
       </item>
      </layout>
@@ -627,10 +630,39 @@ p, li { white-space: pre-wrap; }
       <rect>
        <x>369</x>
        <y>29</y>
-       <width>441</width>
-       <height>281</height>
+       <width>671</width>
+       <height>391</height>
       </rect>
      </property>
+    </widget>
+    <widget class="QWidget" name="gridLayoutWidget_5">
+     <property name="geometry">
+      <rect>
+       <x>30</x>
+       <y>330</y>
+       <width>321</width>
+       <height>80</height>
+      </rect>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_6">
+      <item row="1" column="0">
+       <widget class="QCheckBox" name="PLAY">
+        <property name="text">
+         <string>Reproducción/Pausa</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_11">
+        <property name="text">
+         <string>Dispositivo de salida:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="AudioDevices"/>
+      </item>
+     </layout>
     </widget>
    </widget>
    <widget class="QWidget" name="tab_3">
@@ -642,9 +674,9 @@ p, li { white-space: pre-wrap; }
   <widget class="QSplitter" name="splitter_4">
    <property name="geometry">
     <rect>
-     <x>220</x>
+     <x>340</x>
      <y>10</y>
-     <width>641</width>
+     <width>741</width>
      <height>22</height>
     </rect>
    </property>
@@ -685,7 +717,7 @@ p, li { white-space: pre-wrap; }
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>440</y>
+     <y>480</y>
      <width>691</width>
      <height>18</height>
     </rect>
