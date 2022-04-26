@@ -2,10 +2,7 @@
 
 DUDA:
 - ¿Usamos siempre antirrebote?
-- Hace falta max y min?:
-<br/> ui->sampleRate->setMinimum(deviceInfo.minimumSampleRate());
-<br/> ui->sampleRate->setMaximum(deviceInfo.maximumSampleRate());
-- ¿Que hace MAX_SAMPLES_SOUND? ¿Es necesaria a la hora de hacer 'write'?
+- Variable global boton pulsado, ¿se puede usar?
 
 BUGS:
 - Si activamos la toma de datos antes de 'LeeADC' no va.
@@ -27,6 +24,9 @@ corromper y, por tanto, fallar.
 <br/>     QIODevice *m_device=nullptr;
 <br/>     'XXX.pro': añadir 'multimedia' en el 'QT      +='
 
-<br/>
-<br/>
+CAMBIOS 26/04
+<br/>1.- Se ha hecho todo hasta 2.3 y parte de las especificaciones del punto 4.
+<br/>2.- Control de errores: ya no se puede activar el 'PLAY' si la frecuencia es menor a 4000.
+<br/>3.- Control de versiones ----> VERSION 7
+<br/>4.- Comenzamos a hacer el ultimo punto: 2.4.1
 
