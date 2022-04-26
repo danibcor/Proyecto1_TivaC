@@ -13,7 +13,8 @@ Especificaciones 1: OK
 Especificaciones 2: 
   2.1 -> OK
   2.2 -> OK
-  2.3 -> 
+  2.3 -> OK
   2.4 -> 
 Especificaciones 3: ??
+
 
