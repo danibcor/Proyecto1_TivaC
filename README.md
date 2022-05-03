@@ -8,9 +8,9 @@ Juan José Navarrete Galvez & Daniel Bazo Correa, Grado en Ingeniería de Sistem
 
 EJ (3/4) - Holi
 
-PROYECTO 1:
+PROYECTO 1: </br></br>
 Especificaciones 1: OK </br>
-Especificaciones 2: OK </br>
+Especificaciones 2: OK </br></br>
   2.1 -> OK </br>
   2.2 -> OK </br>
   2.3 -> OK </br>
