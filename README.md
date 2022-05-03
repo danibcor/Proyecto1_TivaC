@@ -14,7 +14,7 @@ Especificaciones 2: OK </br></br>
   2.1 -> OK </br>
   2.2 -> OK </br>
   2.3 -> OK </br>
-  2.4 -> OK </br>
+  2.4 -> OK </br></br>
 Especificaciones 3: ??
 
 
