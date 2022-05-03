@@ -18,10 +18,12 @@
 #include "driverlib/interrupt.h"
 #include "driverlib/adc.h"
 #include "driverlib/timer.h"
-#include "configADC.h"
 #include "FreeRTOS.h"
+#include "configADC.h"
 #include "task.h"
 #include "queue.h"
+
+#include "ColaEventos.h"
 
 // Al ser una cola static, la cola solo se puede emplear en este fichero
 static QueueHandle_t cola_adc;
@@ -84,7 +86,7 @@ void configADC1_ConfigTimer(uint8_t control, double val)
         TimerLoadSet(TIMER2_BASE, TIMER_A, (SysCtlClockGet()/val));
         TimerEnable(TIMER2_BASE, TIMER_A);
 
-        // Habilitar interrupcion ADC1
+        // Reset ADC1
         ADCIntClear(ADC1_BASE, 0);
     }
 }
@@ -175,7 +177,7 @@ void configADC1_IniciaADC1(void)
     ADCSequenceConfigure(ADC1_BASE, 0, ADC_TRIGGER_TIMER, 1);
     ADCSequenceStepConfigure(ADC1_BASE, 0, 0, ADC_CTL_CH11 | ADC_CTL_IE | ADC_CTL_END);
 
-    cola_adc2 = xQueueCreate(16, sizeof(MuestrasADCMicro));
+    cola_adc2 = xQueueCreate(16, sizeof(MuestrasADC));
     if (cola_adc2 == NULL)
     {
         while(1);
@@ -187,7 +189,7 @@ void configADC0_LeeADC0(MuestrasADC *datos)
 	xQueueReceive(cola_adc, datos, portMAX_DELAY);
 }
 
-void configADC1_LeeADC1(MuestrasADCMicro *datos)
+void configADC1_LeeADC1(MuestrasADC *datos)
 {
     xQueueReceive(cola_adc2, datos, portMAX_DELAY);
 }
@@ -196,7 +198,7 @@ void configADC0_ISR(void)
 {
 	portBASE_TYPE higherPriorityTaskWoken = pdFALSE;
 
-	MuestrasLeidasADC leidas;
+	MuestrasLeida leidas;
 	MuestrasADC finales;
 	ADCIntClear(ADC0_BASE, 0);//LIMPIAMOS EL FLAG DE INTERRUPCIONES
 
@@ -205,12 +207,13 @@ void configADC0_ISR(void)
 
 	//Pasamos de 32 bits a 16 (el conversor es de 12 bits, así que sólo son significativos los bits del 0 al 11)
 	// valores de entre 0 hasta 4096 ()
-	finales.chan1 = leidas.chan1;
-	finales.chan2 = leidas.chan2;
-	finales.chan3 = leidas.chan3;
-	finales.chan4 = leidas.chan4;
-    finales.chan5 = leidas.chan5;
-    finales.chan6 = leidas.chan6;
+    uint8_t i;
+    for(i = 0;i < 6;i++)
+    {
+        finales.chan[i] = leidas.chan[i];
+    }
+
+    xEventGroupSetBitsFromISR(FlagsEventos, ADC0_COLA, &higherPriorityTaskWoken);
 
 	//Guardamos en la cola
 	xQueueSendFromISR(cola_adc, &finales, &higherPriorityTaskWoken);
@@ -223,8 +226,8 @@ void configADC1_ISR(void)
 
     portBASE_TYPE higherPriorityTaskWoken = pdFALSE;
 
-    MuestrasLeidaMicro leida;
-    MuestrasADCMicro final;
+    MuestrasLeida leidas;
+    MuestrasADC finales;
     ADCIntClear(ADC1_BASE, 0);//LIMPIAMOS EL FLAG DE INTERRUPCIONES
 
     // tomar las 8 secuencias primero tutoria static
@@ -238,18 +241,20 @@ void configADC1_ISR(void)
         contador = 0;
 
         // Hay que tener cuidado con el tipo empleado para coger los datos guardados
-        ADCSequenceDataGet(ADC1_BASE, 0, (uint32_t *)&leida);//COGEMOS LOS DATOS GUARDADOS
+        ADCSequenceDataGet(ADC1_BASE, 0, (uint32_t *)&leidas);//COGEMOS LOS DATOS GUARDADOS
 
         // Pasamos de 32 bits a 16 (el conversor es de 12 bits, así que sólo son significativos los bits del 0 al 11)
         // valores de entre 0 hasta 4096 ()
         uint8_t i;
         for(i = 0;i < 8;i++)
         {
-            final.chan[i] = leida.chan[i];
+            finales.chan[i] = leidas.chan[i];
         }
 
+        xEventGroupSetBitsFromISR(FlagsEventos, ADC1_COLA, &higherPriorityTaskWoken);
+
         //Guardamos en la cola
-        xQueueSendFromISR(cola_adc2, &final, &higherPriorityTaskWoken);
+        xQueueSendFromISR(cola_adc2, &finales, &higherPriorityTaskWoken);
     }
 
     portEND_SWITCHING_ISR(higherPriorityTaskWoken);
