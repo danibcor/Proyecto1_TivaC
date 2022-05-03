@@ -49,7 +49,7 @@ int32_t remotelink_sendMessage(uint8_t message_type,void *parameter,int32_t para
     numdatos=create_frame(Txframe,message_type,parameter,paramsize,MAX_FRAME_SIZE);
     if (numdatos>=0)
     {
-        USBSerialWrite(Txframe,numdatos,portMAX_DELAY);
+        USBSerialWrite(Txframe,numdatos,2*configTICK_RATE_HZ);
     }
 
     xSemaphoreGive(MUTEX);
