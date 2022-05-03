@@ -10,7 +10,7 @@ EJ (3/4) - Holi
 
 PROYECTO 1: </br></br>
 Especificaciones 1: OK </br>
-Especificaciones 2: OK </br></br>
+Especificaciones 2: OK </br>
 Especificaciones 3: ??
 
 
