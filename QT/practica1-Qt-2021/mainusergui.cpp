@@ -9,6 +9,9 @@
 #include<stdint.h>      // Cabecera para usar tipos de enteros con tamaño
 #include<stdbool.h>     // Cabecera para usar booleanos
 
+static double y_play = 0;
+static int16_t x_anterior_play = 0;
+
 MainUserGUI::MainUserGUI(QWidget *parent) :  // Constructor de la clase
     QWidget(parent),
     ui(new Ui::MainUserGUI)               // Indica que guipanel.ui es el interfaz grafico de la clase
@@ -118,7 +121,7 @@ MainUserGUI::MainUserGUI(QWidget *parent) :  // Constructor de la clase
     connect(ui->botonEstado,SIGNAL(clicked()),this,SLOT(comprobarEstado()));
 
     // Conexion boton de estado switches por eventos
-    connect(ui->botonEstado_evento,SIGNAL(clicked()),this,SLOT(comprobarEstado_Eventos()));
+    connect(ui->botonEstado_evento,SIGNAL(toggled(bool)),this,SLOT(comprobarEstado_Eventos()));
 
     // Conexion boton activar tomas de datos frecuencias de muestreo
     connect(ui->ADCcheck,SIGNAL(clicked()),this,SLOT(on_ADCcheck_clicked()));
@@ -241,12 +244,12 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
             {
                 // La cuenta que se hace es para pasarlo a voltios, se multiplica por VCC de 3.3
                 // y se divido entre 4096 porque es un convertidor de 12 bits
-                ui->lcdCh1->display(((double)parametro.chan1)*3.3/4096.0);
-                ui->lcdCh2->display(((double)parametro.chan2)*3.3/4096.0);
-                ui->lcdCh3->display(((double)parametro.chan3)*3.3/4096.0);
-                ui->lcdCh4->display(((double)parametro.chan4)*3.3/4096.0);
-                ui->lcdCh5->display(((double)parametro.chan5)*3.3/4096.0);
-                ui->lcdCh6->display(((double)parametro.chan6)*3.3/4096.0);
+                ui->lcdCh1->display(((double)parametro.chan[0])*3.3/4096.0);
+                ui->lcdCh2->display(((double)parametro.chan[1])*3.3/4096.0);
+                ui->lcdCh3->display(((double)parametro.chan[2])*3.3/4096.0);
+                ui->lcdCh4->display(((double)parametro.chan[3])*3.3/4096.0);
+                ui->lcdCh5->display(((double)parametro.chan[4])*3.3/4096.0);
+                ui->lcdCh6->display(((double)parametro.chan[5])*3.3/4096.0);
             }
             else
             {   //Si el tamanho de los datos no es correcto emito la senhal statusChanged(...) para reportar un error
@@ -259,7 +262,6 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
         case MESSAGE_64_MUESTRAS:
         {    // Este caso trata la recepcion de datos del ADC desde la TIVA
             MESSAGE_64_MUESTRAS_PARAMETER parametros;
-            double valor_frec = ui->boton_frec->value();
 
             if (check_and_extract_command_param(datos.data(), datos.size(), &parametros, sizeof(parametros)) > 0)
             {
@@ -288,7 +290,9 @@ void MainUserGUI::messageReceived(uint8_t message_type, QByteArray datos)
                     {
                         for(i = 0;i < 64; i++)
                         {
-                            sonido[(64 * contador) + i] = parametros.valor[i];
+                            y_play = (double)y_play *0.97 + (double)(parametros.valor[i] - x_anterior_play);
+                            x_anterior_play = parametros.valor[i];
+                            sonido[(64 * contador) + i] = ((int16_t)y_play)*6;
                         }
 
                         contador++;
@@ -479,6 +483,14 @@ void MainUserGUI::comprobarEstado()
 void MainUserGUI::comprobarEstado_Eventos()
 {
     MESSAGE_ESTADO_SWITCH_EVENTOS_PARAMETER estado;
+    if(ui->botonEstado_evento->isChecked())
+    {
+        estado.on_off = 1;
+    }
+    else
+    {
+        estado.on_off = 0;
+    }
     tiva.sendMessage(MESSAGE_ESTADO_SWITCH_EVENTOS,QByteArray::fromRawData((char *)&estado,sizeof(estado)));
 }
 
@@ -602,6 +614,8 @@ void MainUserGUI::on_PLAY_toggled(bool checked)
     {
         // Deshabilitar el cambio de frecuencia mientras se reproduce el audio
         ui->boton_frec->setDisabled(true);
+        // Deshabilitar el cambio de salida de audio
+        ui->AudioDevices->setDisabled(true);
         //Arranca la reproducción , obteniendo un QIODevice donde enviar las muestras ("modo PUSH de QAudioSink")
         m_device = m_audioOutput->start();
     }
@@ -609,6 +623,8 @@ void MainUserGUI::on_PLAY_toggled(bool checked)
     {
         // Habilitar el cambio de frecuencia tras dejar de reproducir el audio
         ui->boton_frec->setDisabled(false);
+        // Habilitar el cambio de salida de audio
+        ui->AudioDevices->setDisabled(false);
         //Detiene la reproducción de Audio.
         m_audioOutput->stop();
     }

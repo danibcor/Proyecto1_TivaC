@@ -23,7 +23,7 @@
     </rect>
    </property>
    <property name="currentIndex">
-    <number>1</number>
+    <number>0</number>
    </property>
    <widget class="QWidget" name="tab">
     <attribute name="title">
@@ -139,6 +139,16 @@
       </rect>
      </property>
      <layout class="QGridLayout" name="gridLayout_3">
+      <item row="1" column="2">
+       <widget class="QLabel" name="label_7">
+        <property name="text">
+         <string>Pulsar para comprobar estado switches</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="1">
        <widget class="Led" name="led_azul">
         <property name="toolTip">
@@ -156,16 +166,6 @@
           <green>0</green>
           <blue>255</blue>
          </color>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLabel" name="label_4">
-        <property name="text">
-         <string>Switch 2</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
@@ -192,10 +192,10 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="2">
-       <widget class="QLabel" name="label_7">
+      <item row="1" column="1">
+       <widget class="QLabel" name="label_4">
         <property name="text">
-         <string>Pulsar para comprobar estado switches</string>
+         <string>Switch 2</string>
         </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
@@ -342,21 +342,9 @@
        </widget>
       </item>
       <item row="0" column="2">
-       <widget class="QPushButton" name="botonEstado_evento">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="maximumSize">
-         <size>
-          <width>100</width>
-          <height>30</height>
-         </size>
-        </property>
+       <widget class="QCheckBox" name="botonEstado_evento">
         <property name="text">
-         <string>Activar Eventos</string>
+         <string>Activar/Desactivar Eventos Switches</string>
         </property>
         <property name="iconSize">
          <size>
@@ -364,11 +352,8 @@
           <height>16</height>
          </size>
         </property>
-        <property name="checkable">
+        <property name="tristate">
          <bool>false</bool>
-        </property>
-        <property name="autoRepeatDelay">
-         <number>300</number>
         </property>
        </widget>
       </item>

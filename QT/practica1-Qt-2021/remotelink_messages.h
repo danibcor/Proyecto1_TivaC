@@ -40,6 +40,7 @@ typedef struct{
 } MESSAGE_FRECUENCIA_MUESTREO_PARAMETER;
 
 typedef struct{
+    uint8_t on_off;
     uint8_t switch1;
     uint8_t switch2;
 } MESSAGE_ESTADO_SWITCH_EVENTOS_PARAMETER;
@@ -79,12 +80,7 @@ typedef struct {
 
 typedef struct
 {
-    uint16_t chan1;
-    uint16_t chan2;
-    uint16_t chan3;
-    uint16_t chan4;
-    uint16_t chan5;
-    uint16_t chan6;
+    uint16_t chan[6];
 } MESSAGE_ADC_SAMPLE_PARAMETER;
 
 #pragma pack()  //...Pero solo para los comandos que voy a intercambiar, no para el resto.
