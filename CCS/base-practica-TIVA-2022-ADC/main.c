@@ -27,29 +27,26 @@
 #include <remotelink.h>
 #include <serialprotocol.h>
 
+// Fichero creado para declarar las etiquetas el manejador de eventos
+#include "drivers/ColaEventos.h"
 
 //parametros de funcionamiento de la tareas
 #define REMOTELINK_TASK_STACK (512)
 #define REMOTELINK_TASK_PRIORITY (tskIDLE_PRIORITY+2)
 #define COMMAND_TASK_STACK (512)
 #define COMMAND_TASK_PRIORITY (tskIDLE_PRIORITY+1)
-#define ADC0_TASK_STACK (256)
-#define ADC0_TASK_PRIORITY (tskIDLE_PRIORITY+1)
-#define ADC1_TASK_STACK (256)
-#define ADC1_TASK_PRIORITY (tskIDLE_PRIORITY+1)
-#define SWITCHES_TASK_STACK (256)
-#define SWITCHES_TASK_PRIORITY (tskIDLE_PRIORITY+1)
 
-// Prioridad para la tarea SW2TASK
-#define SW2TASKPRIO 1
-// Tamaño de pila para la tarea SW2TASK
-#define SW2TASKSTACKSIZE 128
+// Prioridad para la tarea maestra
+#define MASTERTASKPRIO 1
+// Tamaño de pila para la tarea maestra
+#define MASTERTASKSIZE 512
 
 //Globales
 uint32_t g_ui32CPUUsage;
 uint32_t g_ulSystemClock;
 QueueHandle_t cola_freertos;
-uint8_t botonPulsado = 0;
+
+EventGroupHandle_t FlagsEventos;
 
 //*****************************************************************************
 //
@@ -123,104 +120,96 @@ void vApplicationMallocFailedHook (void)
 // A continuacion van las tareas...
 //
 //*****************************************************************************
-static portTASK_FUNCTION(Switch2Task,pvParameters)
+static portTASK_FUNCTION(TareaMaestra,pvParameters)
 {
     MESSAGE_ESTADO_SWITCH_EVENTOS_PARAMETER estado;
     uint32_t ui32Status;
 
-    while(1)
-    {
-        if (xQueueReceive(cola_freertos,&ui32Status,portMAX_DELAY) == pdTRUE){
-
-            if(ui32Status == 0)
-            {
-                UARTprintf("Switch 1 y Switch 2 pulsados\r\n");
-                estado.switch1 = 0;
-                estado.switch2 = 0;
-            }
-            else if (!(ui32Status & LEFT_BUTTON))
-            {
-                UARTprintf("Switch 1 pulsado\r\n");
-                estado.switch1 = 0;
-                estado.switch2 = 1;
-            }
-            else if (!(ui32Status & RIGHT_BUTTON))
-            {
-                UARTprintf("Switch 2 pulsado\r\n");
-                estado.switch2 = 0;
-                estado.switch1 = 1;
-            }
-            else
-            {
-                UARTprintf("Switch 1 o Switch 2 no pulsado\r\n");
-                estado.switch2 = 1;
-                estado.switch1 = 1;
-            }
-
-            //Envia el mensaje hacia QT
-            remotelink_sendMessage(MESSAGE_ESTADO_SWITCH_EVENTOS,(void *)&estado,sizeof(estado));
-
-        }
-    }
-}
-
-//Para especificacion 2. Esta tarea no tendria por que ir en main.c
-static portTASK_FUNCTION(ADCTask0, pvParameters)
-{
-
     MuestrasADC muestras;
-    MESSAGE_ADC_SAMPLE_PARAMETER parameter;
+    MESSAGE_ADC_SAMPLE_PARAMETER parameter_ADC;
 
-    // Bucle infinito, las tareas en FreeRTOS no pueden "acabar", deben "matarse" con la funcion xTaskDelete().
-    while(1)
-    {
-        //Espera y lee muestras del ADC (BLOQUEANTE)
-        configADC0_LeeADC0(&muestras);
-
-        //Copia los datos en el parametro (es un poco redundante)
-        parameter.chan1 = muestras.chan1;
-        parameter.chan2 = muestras.chan2;
-        parameter.chan3 = muestras.chan3;
-        parameter.chan4 = muestras.chan4;
-        parameter.chan5 = muestras.chan5;
-        parameter.chan6 = muestras.chan6;
-
-        //Envia el mensaje hacia QT
-        remotelink_sendMessage(MESSAGE_ADC_SAMPLE, (void *)&parameter, sizeof(parameter));
-    }
-}
-
-//Para especificacion 2. Esta tarea no tendria por que ir en main.c
-static portTASK_FUNCTION(ADCTask1,pvParameters)
-{
     static uint8_t cantidad = 0;
     static uint8_t indice;
+    MuestrasADC muestra;
+    MESSAGE_64_MUESTRAS_PARAMETER parameter_64;
 
-    MuestrasADCMicro muestra;
-    MESSAGE_64_MUESTRAS_PARAMETER parameter;
+    EventBits_t eventos;
 
-    // Bucle infinito, las tareas en FreeRTOS no pueden "acabar", deben "matarse" con la funcion xTaskDelete().
     while(1)
     {
-        //Espera y lee muestras del ADC (BLOQUEANTE)
-        configADC1_LeeADC1(&muestra);
+        eventos = xEventGroupWaitBits(FlagsEventos, BOTONES|ADC0_COLA|ADC1_COLA, pdTRUE, pdFALSE, portMAX_DELAY);
 
-        if(cantidad < 8)
+        if(eventos & (BOTONES))
         {
-            //Copia los datos en el parametro
-            for(indice = 8*cantidad;indice < 8*cantidad + 8;indice++)
+            if (xQueueReceive(cola_freertos,&ui32Status,portMAX_DELAY) == pdTRUE){
+
+                if(ui32Status == 0)
+                {
+                    UARTprintf("Switch 1 y Switch 2 pulsados\r\n");
+                    estado.switch1 = 0;
+                    estado.switch2 = 0;
+                }
+                else if (!(ui32Status & LEFT_BUTTON))
+                {
+                    UARTprintf("Switch 1 pulsado\r\n");
+                    estado.switch1 = 0;
+                    estado.switch2 = 1;
+                }
+                else if (!(ui32Status & RIGHT_BUTTON))
+                {
+                    UARTprintf("Switch 2 pulsado\r\n");
+                    estado.switch2 = 0;
+                    estado.switch1 = 1;
+                }
+                else
+                {
+                    UARTprintf("Switch 1 o Switch 2 no pulsado\r\n");
+                    estado.switch2 = 1;
+                    estado.switch1 = 1;
+                }
+
+                //Envia el mensaje hacia QT
+                remotelink_sendMessage(MESSAGE_ESTADO_SWITCH_EVENTOS,(void *)&estado,sizeof(estado));
+
+            }
+        }
+        else if(eventos & (ADC0_COLA))
+        {
+            //Espera y lee muestras del ADC (BLOQUEANTE)
+            configADC0_LeeADC0(&muestras);
+
+            //Copia los datos en el parametro (es un poco redundante)
+            uint8_t i;
+            for(i = 0;i < 6;i++)
             {
-                parameter.valor[indice] = muestra.chan[indice-8*cantidad];
+                parameter_ADC.chan[i] = muestras.chan[i];
             }
 
-            cantidad++;
-        }
-
-        if(cantidad == 8)
-        {
-            cantidad = 0;
             //Envia el mensaje hacia QT
-            remotelink_sendMessage(MESSAGE_64_MUESTRAS, (void *)&parameter, sizeof(parameter));
+            remotelink_sendMessage(MESSAGE_ADC_SAMPLE, (void *)&parameter_ADC, sizeof(parameter_ADC));
+        }
+        else if(eventos & (ADC1_COLA))
+        {
+            //Espera y lee muestras del ADC (BLOQUEANTE)
+            configADC1_LeeADC1(&muestra);
+
+            if(cantidad < 8)
+            {
+                //Copia los datos en el parametro
+                for(indice = 8*cantidad;indice < 8*cantidad + 8;indice++)
+                {
+                    parameter_64.valor[indice] = muestra.chan[indice-8*cantidad];
+                }
+
+                cantidad++;
+            }
+
+            if(cantidad == 8)
+            {
+                cantidad = 0;
+                //Envia el mensaje hacia QT
+                remotelink_sendMessage(MESSAGE_64_MUESTRAS, (void *)&parameter_64, sizeof(parameter_64));
+            }
         }
     }
 }
@@ -324,7 +313,7 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
             }
             else
             {
-                status=PROT_ERROR_INCORRECT_PARAM_SIZE;
+                status = PROT_ERROR_INCORRECT_PARAM_SIZE;
             }
         }
 
@@ -380,25 +369,15 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
 
             if (check_and_extract_command_param(parameters, parameterSize, &estado, sizeof(estado)) > 0)
             {
-                if(botonPulsado == 0)
+                if(estado.on_off == 1)
                 {
-
-                    botonPulsado = 1;
-
-                    GPIOIntTypeSet(GPIO_PORTF_BASE, ALL_BUTTONS,GPIO_FALLING_EDGE);
+                    GPIOIntTypeSet(GPIO_PORTF_BASE, ALL_BUTTONS,GPIO_BOTH_EDGES);
                     IntPrioritySet(INT_GPIOF,configMAX_SYSCALL_INTERRUPT_PRIORITY);
                     GPIOIntEnable(GPIO_PORTF_BASE,ALL_BUTTONS);
                     IntEnable(INT_GPIOF);
-
-                    if((xTaskCreate(Switch2Task, "Sw2",SW2TASKSTACKSIZE, NULL, tskIDLE_PRIORITY + SW2TASKPRIO, NULL) != pdTRUE))
-                    {
-                        while(1);
-                    }
                 }
                 else
                 {
-                    botonPulsado = 0;
-
                     // Deshabilitamos las interrupciones de los switches
                     IntDisable(INT_GPIOF);
                     estado.switch2 = 1;
@@ -472,6 +451,13 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
 //*****************************************************************************
 int main(void)
 {
+    //Crea el grupo de eventos
+    FlagsEventos = xEventGroupCreate();
+    if( FlagsEventos == NULL )
+    {
+        while(1);
+    }
+
     cola_freertos = xQueueCreate(16,sizeof(uint32_t));
     if(cola_freertos == NULL)
     {
@@ -536,12 +522,7 @@ int main(void)
 	configADC0_IniciaADC0();
 	configADC1_IniciaADC1();
 
-    if((xTaskCreate(ADCTask0, (portCHAR *)"ADC0", ADC0_TASK_STACK, NULL, ADC0_TASK_PRIORITY, NULL) != pdTRUE))
-    {
-        while(1);
-    }
-
-    if((xTaskCreate(ADCTask1, (portCHAR *)"ADC1", ADC1_TASK_STACK, NULL, ADC1_TASK_PRIORITY, NULL) != pdTRUE))
+    if((xTaskCreate(TareaMaestra, "MasterTask", MASTERTASKSIZE, NULL, tskIDLE_PRIORITY + MASTERTASKPRIO, NULL) != pdTRUE))
     {
         while(1);
     }
@@ -565,6 +546,8 @@ void GPIOFIntHandler(void)
     // Lee el estado del puerto (activos a nivel bajo)
     // pasamos el estado de los pines cuando se produjo la interrupcion
     int32_t i32PinStatus = MAP_GPIOPinRead(GPIO_PORTF_BASE, ALL_BUTTONS);
+
+    xEventGroupSetBitsFromISR(FlagsEventos, BOTONES, &higherPriorityTaskWoken);
 
     // FromISR porque estoy en un rutina de tratamiento de interrupción
     // Pasamos un valor por referencia, escribe en la cola freeRTOS
