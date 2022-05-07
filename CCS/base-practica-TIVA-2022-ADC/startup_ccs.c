@@ -64,6 +64,7 @@ extern void ADCIntHandler(void);
 extern void UARTStdioIntHandler(void);
 extern void USB0DeviceIntHandler(void);
 extern void GPIOFIntHandler(void);
+extern void I2CDriver_ISR(void);
 //*****************************************************************************
 //
 // The vector table.  Note that the proper constructs must be placed on this to
@@ -128,7 +129,7 @@ void (* const g_pfnVectors[])(void) =
     IntDefaultHandler,                      // SSI1 Rx and Tx
     IntDefaultHandler,                      // Timer 3 subtimer A
     IntDefaultHandler,                      // Timer 3 subtimer B
-    IntDefaultHandler,                      // I2C1 Master and Slave
+    I2CDriver_ISR,                          // I2C1 Master and Slave
     IntDefaultHandler,                      // Quadrature Encoder 1
     IntDefaultHandler,                      // CAN0
     IntDefaultHandler,                      // CAN1

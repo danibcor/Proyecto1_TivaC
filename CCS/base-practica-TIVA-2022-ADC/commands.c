@@ -1,3 +1,12 @@
+//*****************************************************************************
+//
+// commands.c - FreeRTOS porting example on CCS4
+//
+// Este fichero contiene errores que seran explicados en clase
+//
+//*****************************************************************************
+
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -5,6 +14,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <drivers/ACME_1623.h>
+
 
 /* FreeRTOS includes */
 #include "FreeRTOS.h"
@@ -29,6 +40,13 @@
 #include "utils/uartstdio.h"
 
 #include "drivers/rgb.h"
+
+#include "drivers/i2c_driver.h"
+
+
+#include "emul/ACMESim_i2c_slave.h"
+
+#include "drivers/BMI160.h"
 
 // ==============================================================================
 // The CPU usage in percent, in 16.16 fixed point format.
@@ -294,9 +312,9 @@ static int Cmd_rgb(int argc, char *argv[])
 	}
 	else
 	{
-		arrayRGB[0]=strtoul(argv[1], NULL, 10) << 8;
-		arrayRGB[1]=strtoul(argv[2], NULL, 10) << 8;
-		arrayRGB[2]=strtoul(argv[3], NULL, 10) << 8;
+		arrayRGB[0]=strtoul(argv[1], NULL, 10)<<8;
+		arrayRGB[1]=strtoul(argv[2], NULL, 10)<<8;
+		arrayRGB[2]=strtoul(argv[3], NULL, 10)<<8;
 
 		if ((arrayRGB[0]>=65535)||(arrayRGB[1]>=65535)||(arrayRGB[2]>=65535))
 		{
@@ -312,6 +330,196 @@ static int Cmd_rgb(int argc, char *argv[])
     return 0;
 }
 
+// ==============================================================================
+// Implementa el comando "RGB"
+// ==============================================================================
+static int Cmd_readAcc(int argc, char *argv[])
+{
+
+
+    if (argc != 1)
+    {
+        //Si los par�metros no son suficientes, muestro la ayuda
+        UARTprintf(" readacc\r\n");
+    }
+    else
+    {
+        int16_t x,y,z;
+
+        BMI160_getAcceleration(&x,&y,&z);
+
+        UARTprintf("Acc: %d %d %d \r\n",(uint32_t)x,(uint32_t)y,(uint32_t)z);
+    }
+
+    return 0;
+}
+
+
+static int Cmd_ACME(int argc, char *argv[])
+{
+
+
+    if (argc < 2)
+    {
+        //Si los par�metros no son suficientes, muestro la ayuda
+        UARTprintf(" acme <op> [value]\r\n");
+        UARTprintf(" <op> can be dir, input, output, clear, itype, istat, connect, disconnect, adc, read \r\n");
+    }
+    else
+    {
+
+        if (0==strncmp( argv[1], "dir",3))
+        {
+            if (argc<3)
+            {
+                UARTprintf("acme dir <val>\r\n");
+            }
+            else
+            {
+                uint8_t val=strtoul(argv[2],NULL,16);
+
+                if (ACME_setPinDir(val)<0)
+                {
+                    UARTprintf("Error en el proceso...\r\n");
+                }
+                else
+                {
+                    UARTprintf("OK\r\n");
+                }
+            }
+
+        }
+        else if (0==strncmp( argv[1], "input",5))
+        {
+            uint8_t val;
+            if (ACME_readPin(&val))
+            {
+                UARTprintf("Error en el proceso...\r\n");
+            }
+            else
+            {
+                UARTprintf("OK.");
+                UARTprintf(" %x \r\n",(uint32_t)val);
+            }
+        }
+        else if (0==strncmp( argv[1], "output",6))
+        {
+            if (argc<3)
+            {
+                UARTprintf("acme input <val>\r\n");
+            }
+            else
+            {
+                uint8_t val=strtoul(argv[2],NULL,16);
+                if (ACME_writePin(val)<0)
+                {
+                    UARTprintf("Error en el proceso...\r\n");
+                }
+                else
+                {
+                    UARTprintf("OK\r\n");
+                }
+            }
+
+        }
+        else if (0==strncmp( argv[1], "clear",5))
+        {
+            if (argc<3)
+            {
+                UARTprintf("acme clear <val>\r\n");
+            }
+            else
+            {
+                uint8_t val=strtoul(argv[2],NULL,16);
+                if (ACME_clearInt (val)<0)
+                {
+                    UARTprintf("Error en el proceso...\r\n");
+                }
+                else
+                {
+                    UARTprintf("OK\r\n");
+                }
+            }
+
+        }
+        else if (0==strncmp( argv[1], "itype",5))
+        {
+            if (argc<3)
+            {
+                UARTprintf("acme itype <val>\r\n");
+            }
+            else
+            {
+                uint16_t val=strtoul(argv[2],NULL,16);
+                if (ACME_setIntTriggerType ((val&0xFF),(val>>8)&0xFF)<0)
+                {
+                    UARTprintf("Error en el proceso...\r\n");
+                }
+                else
+                {
+                    UARTprintf("OK\r\n");
+                }
+            }
+        }
+        else if (0==strncmp( argv[1], "istat",5))
+        {
+            uint8_t val;
+            if (ACME_readInt(&val))
+            {
+                UARTprintf("Error en el proceso...\r\n");
+            }
+            else
+            {
+                UARTprintf("OK.");
+                UARTprintf(" %x \r\n",(uint32_t)val);
+            }
+        }
+        else if (0==strncmp( argv[1], "adc",3))
+        {
+            uint16_t val[4];
+            if (ACME_readADC(val))
+            {
+                UARTprintf("Error en el proceso...\r\n");
+            }
+            else
+            {
+                UARTprintf("OK.");
+                UARTprintf(" %x %x %x %x \r\n",(uint32_t)val[0],(uint32_t)val[1],(uint32_t)val[2],(uint32_t)val[3]);
+            }
+        }
+        else if (0==strncmp( argv[1], "read",4))
+        {
+             uint8_t buf[16];
+             if (ACME_read(buf,sizeof(buf)))
+             {
+                 UARTprintf("Error en el proceso...\r\n");
+             }
+             else
+             {
+                int i;
+
+                for (i=0;i<16;i++)
+                {
+                    UARTprintf(" %x ",(uint32_t)buf[i]);
+                }
+                UARTprintf("OK.\r\n");
+             }
+        }
+        else if (0==strncmp( argv[1], "disconnect",10))
+        {
+            ACMEsim_SlaveDisable();
+        }
+        else if (0==strncmp( argv[1], "connect",7))
+        {
+            ACMEsim_SlaveEnable();
+        }
+        else
+        {
+            UARTprintf(" <op> can be dir, input, output, clear, itype, istat, connect, disconnect, adc, read \r\n");
+        }
+    }
+    return 0;
+}
 
 
 
@@ -323,12 +531,14 @@ static int Cmd_rgb(int argc, char *argv[])
 tCmdLineEntry g_psCmdTable[] =
 {
     { "help", Cmd_help, "\t\t: Lista de comandos" },
-    { "?", Cmd_help, "\t\t: Lista de comandos (igual que help)" },
-    { "cpu", Cmd_cpu, "\t\t: Muestra el uso de  CPU" },
+    { "?", Cmd_help, "\t\t: lo mismo que help" },
+    { "cpu", Cmd_cpu, "\t\t: Muestra el uso de  CPU " },
     { "led", Cmd_led, "\t\t: Apaga y enciende el led verde" },
     { "mode", Cmd_mode, "\t\t: Cambia los pines PF1, PF2 y PF3 entre modo GPIO y modo PWM (rgb)" },
     { "rgb", Cmd_rgb, "\t\t: Establece el color RGB" },
-    { "intensity", Cmd_intensity, "\t\t: Cambia el nivel de intensidad" },
+    { "readacc", Cmd_readAcc, "\t\t: Lee valores de aceleracion" },
+    { "acme", Cmd_ACME, "\t\t: Lee valores de aceleracion" },
+    { "intensity", Cmd_intensity, "\t: Cambia el nivel de intensidad" },
     { "free", Cmd_free, "\t\t: Muestra la memoria libre" },
 #if ( configUSE_TRACE_FACILITY == 1 )
 	{ "tasks", Cmd_tasks, "\t\t: Muestra informacion de las tareas" },
@@ -350,6 +560,32 @@ static void vCommandTask( void *pvParameters )
     //
     // Mensaje de bienvenida inicial.
     //
+
+    vTaskDelay(500);
+
+
+    if (!ACME_initDevice())
+        {
+
+        UARTprintf("\r\n Sensor ACME Inicializado \r\n");
+        }
+    else UARTprintf("\r\n Error en la inicizalizacion del sensor ACME \r\n");
+
+    BMI160_initialize();
+
+    if (BMI160_testConnection())
+    {
+        UARTprintf("\r\n Sensor BCI160 Inicializado \r\n");
+    }
+    else
+    {
+        UARTprintf("\r\n Error en la inicizalizacion del sensor BCI160 \r\n");
+    }
+
+
+
+
+
     UARTprintf("\r\n\r\nWelcome to the TIVA FreeRTOS Demo!\r\n");
 	UARTprintf("\r\n\r\n FreeRTOS %s \r\n",
 		tskKERNEL_VERSION_NUMBER);
@@ -405,6 +641,8 @@ static void vCommandTask( void *pvParameters )
 }
 
 
+
+
 //
 // Create la tarea que gestiona los comandos (definida en el fichero commands.c)
 //
@@ -424,6 +662,8 @@ BaseType_t initCommandLine(uint16_t stack_size,uint8_t prioriry )
     //Esta funcion habilita la interrupcion de la UART y le da la prioridad adecuada si esta activado el soporte para FreeRTOS
     UARTStdioConfig(0,115200,SysCtlClockGet());
     SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_UART0);   //La UART tiene que seguir funcionando aunque el micro esta dormido
+
+    I2CDriver_Open(I2CDRIVER_MASTER_MODE_FST);
 
     return xTaskCreate(vCommandTask, (signed portCHAR *)"UartComm", stack_size,NULL,prioriry, NULL);
 }
