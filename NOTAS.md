@@ -2,6 +2,11 @@
 
 DUDA:
 - Especificacion pone usar un array de 4 posiciones uint16_t, pero el I2C WritenRead usa uint8_t. ¿?
+- Al hacer 'readADC' pasamos un array de 4 posiciones. WritenRead, ¿rellena automaticamente cada celda del array?
+- En ACME, para recibir 4 canales de 16, ¿poner 8 canales? (8 + 8 = 16)
+- Como leer datasheet. ¿Con el eje X leo los 3 ejes?
+- Usar BMI160_reg_write o BMI160_serial_buffer_transfer.
+- Preguntar registro gyro y acc.
 
 BUGS:
 - Si activamos la toma de datos antes de 'LeeADC' no va.
