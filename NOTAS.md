@@ -1,8 +1,7 @@
 # BLOC DE NOTAS
 
 DUDA:
-- ¿Usamos siempre antirrebote?
-- Variable global boton pulsado, ¿se puede usar?
+- Especificacion pone usar un array de 4 posiciones uint16_t, pero el I2C WritenRead usa uint8_t. ¿?
 
 BUGS:
 - Si activamos la toma de datos antes de 'LeeADC' no va.
