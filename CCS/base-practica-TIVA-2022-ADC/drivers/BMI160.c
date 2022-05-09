@@ -72,7 +72,6 @@ static int32_t BMI160_serial_buffer_transfer (uint8_t *buf, unsigned tx_cnt, uns
             return I2CDriver_WriteAndRead(BMI160_I2C_ADDR,buf,tx_cnt,buf,rx_cnt);
         }
     }
-
 }
 
 /******************************************************************************/
@@ -188,7 +187,12 @@ bool BMI160_testConnection()
  * @see getFullScaleGyroRange()
  */
 void BMI160_setFullScaleGyroRange(uint8_t range) {
-    // Para implementar
+
+
+
+
+
+
 }
 
 /** Set full-scale accelerometer range.
@@ -197,12 +201,13 @@ void BMI160_setFullScaleGyroRange(uint8_t range) {
  * @see BMI160AccelRange
  */
 void BMI160_setFullScaleAccelRange(uint8_t range) {
-    //Para implementar
+
+
+
+
+
+
 }
-
-
-
-
 
 
 /** Get 3-axis accelerometer readings.
@@ -218,14 +223,16 @@ void BMI160_getAcceleration(int16_t* x, int16_t* y, int16_t* z) {
 }
 
 
-
-
 /** Get 3-axis gyroscope readings.
  */
 void BMI160_getRotation(int16_t* x, int16_t* y, int16_t* z) {
-    //POR COMPLETAR....
+    uint8_t buffer[6];
+    buffer[0] = BMI160_RA_GYRO_X_L;
+    BMI160_serial_buffer_transfer(buffer, 1, 6);
+    *x = (((int16_t)buffer[1]) << 8) | buffer[0];
+    *y = (((int16_t)buffer[3]) << 8) | buffer[2];
+    *z = (((int16_t)buffer[5]) << 8) | buffer[4];
 }
-
 
 
 /** Read a BMI160 register directly.
