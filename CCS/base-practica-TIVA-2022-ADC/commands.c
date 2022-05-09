@@ -339,7 +339,7 @@ static int Cmd_readAcc(int argc, char *argv[])
 
     if (argc != 1)
     {
-        //Si los par�metros no son suficientes, muestro la ayuda
+        //Si los parametros no son suficientes, muestro la ayuda
         UARTprintf(" readacc\r\n");
     }
     else
@@ -349,6 +349,26 @@ static int Cmd_readAcc(int argc, char *argv[])
         BMI160_getAcceleration(&x,&y,&z);
 
         UARTprintf("Acc: %d %d %d \r\n",(uint32_t)x,(uint32_t)y,(uint32_t)z);
+    }
+
+    return 0;
+}
+
+
+static int Cmd_readGyro(int argc, char *argv[])
+{
+    if (argc != 1)
+    {
+        //Si los parametros no son suficientes, muestro la ayuda
+        UARTprintf(" readGyro\r\n");
+    }
+    else
+    {
+        int16_t x,y,z;
+
+        BMI160_getRotation(&x, &y, &z);
+
+        UARTprintf("Giroscopio: %d %d %d \r\n",(uint32_t)x, (uint32_t)y, (uint32_t)z);
     }
 
     return 0;
@@ -451,7 +471,7 @@ static int Cmd_ACME(int argc, char *argv[])
             else
             {
                 uint16_t val=strtoul(argv[2],NULL,16);
-                if (ACME_setIntTriggerType ((val&0xFF),(val>>8)&0xFF)<0)
+                if (ACME_setIntTriggerType ((val&0xFF), (val>>8)&0xFF)<0)
                 {
                     UARTprintf("Error en el proceso...\r\n");
                 }
@@ -537,6 +557,7 @@ tCmdLineEntry g_psCmdTable[] =
     { "mode", Cmd_mode, "\t\t: Cambia los pines PF1, PF2 y PF3 entre modo GPIO y modo PWM (rgb)" },
     { "rgb", Cmd_rgb, "\t\t: Establece el color RGB" },
     { "readacc", Cmd_readAcc, "\t\t: Lee valores de aceleracion" },
+    { "readgyro", Cmd_readGyro, "\t\t: Lee valores del giroscopio" },
     { "acme", Cmd_ACME, "\t\t: Lee valores de aceleracion" },
     { "intensity", Cmd_intensity, "\t: Cambia el nivel de intensidad" },
     { "free", Cmd_free, "\t\t: Muestra la memoria libre" },
