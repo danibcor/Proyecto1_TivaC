@@ -329,10 +329,13 @@ void I2CDriver_ISR(void)
                 //Arranca la transaccion....
                 if (xQueuePeekFromISR(g_I2C_transaction_queue,&transaction)==pdTRUE)
                 {
+
                     //Hay algo en la cola... puedo comenzar
                     I2CMasterIntEnable(I2C1_BASE);
                     switch (transaction.command)
                     {
+
+
                         /* TRANSACCION WRITE */
                         case I2C_COMMAND_WRITE:
                         {
@@ -359,7 +362,7 @@ void I2CDriver_ISR(void)
                         break;
 
 
-                        /* TRANSACCION COMBINADA */
+                        /* TRANSACCION READ o COMBINADA */
                         case I2C_COMMAND_WRITE_READ:
                         {
                             tmpptr = transaction.txbuffer;
@@ -383,7 +386,7 @@ void I2CDriver_ISR(void)
 
                         break;
 
-                        /* TRANSACCION READ */
+
                         case I2C_COMMAND_READ:
                         {
                             tmpptr = transaction.rxbuffer;

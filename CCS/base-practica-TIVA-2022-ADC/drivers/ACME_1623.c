@@ -108,16 +108,16 @@ int32_t ACME_clearInt (uint8_t pin)
     uint8_t array_envio[2];
     int32_t status;
 
-    array_envio[0] = ACME_INT_CLEAR_REGISTER;
-    array_envio[1] = pin;
-    status = I2CDriver_Write(ACME_I2C_ADDRESS, array_envio, sizeof(array_envio));
+    array_envio[0]=ACME_INT_CLEAR_REGISTER;
+    array_envio[1]=pin;
+    status=I2CDriver_Write(ACME_I2C_ADDRESS,array_envio,sizeof(array_envio));
     return status;
 }
 
 
 //Escribe los registros INT_TYPE y ADC_INT_TRIG
 // A COMPLETAR
-ACME_setIntTriggerType (uint8_t intType ,uint8_t intTrigADC)
+ACME_setIntTriggerType (uint8_t intType, uint8_t intTrigADC)
 {
     uint8_t array_escritura[3];
     int32_t status;
@@ -128,7 +128,7 @@ ACME_setIntTriggerType (uint8_t intType ,uint8_t intTrigADC)
 
     status = I2CDriver_Write(ACME_I2C_ADDRESS, array_escritura, sizeof(array_escritura));
 
-    if(status != 0)
+    if(status!=0)
     {
         return -1;
     }
@@ -149,12 +149,18 @@ int32_t ACME_readInt (uint8_t *pin)
 // A COMPLETAR
 int32_t ACME_readADC (uint16_t *adcData)
 {
-    uint8_t registro_adc = ACME_ADC_INT_TRIGGER_REGISTER;
+    uint8_t dir_registro_adc = ACME_CH0_LOW;
     int32_t status;
+    uint8_t dato_rec[8];
 
-    status = I2CDriver_WriteAndRead(ACME_I2C_ADDRESS, &registro_adc, sizeof(registro_adc), adcData, sizeof(adcData));
+    status = I2CDriver_WriteAndRead(ACME_I2C_ADDRESS, &dir_registro_adc, sizeof(dir_registro_adc), dato_rec, sizeof(uint8_t)*8);
 
-    if(status != 0)
+    adcData[0] = (((uint16_t)dato_rec[1]) << 8) | dato_rec[0];
+    adcData[1] = (((uint16_t)dato_rec[3]) << 8) | dato_rec[2];
+    adcData[2] = (((uint16_t)dato_rec[5]) << 8) | dato_rec[4];
+    adcData[3] = (((uint16_t)dato_rec[7]) << 8) | dato_rec[6];
+
+    if(status!=0)
     {
         return -1;
     }
