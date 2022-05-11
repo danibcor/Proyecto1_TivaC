@@ -19,6 +19,10 @@ typedef enum {
     MESSAGE_ACTIVAR_MUESTREO,
     MESSAGE_FRECUENCIA_MUESTREO,
     MESSAGE_64_MUESTRAS,
+    MESSAGE_ACME,
+    MESSAGE_ACME_ADC,
+    MESSAGE_BMI_ON_OFF,
+    MESSAGE_BMI_DATOS,
 } messageTypes;
 
 //Estructuras relacionadas con los parametros de los mensahes. El estuadiante debera crear las
@@ -27,7 +31,24 @@ typedef enum {
 #pragma pack(1) //Cambia el alineamiento de datos en memoria a 1 byte.
 
 typedef struct{
-    uint16_t valor[64];                 // PPP: Hace falta inicializar array? (Al recibir el mensaje)
+    int16_t acc[3];
+    int16_t gyro[3];
+} MESSAGE_BMI_DATOS_PARAMETER;
+
+typedef struct{
+    uint8_t estado_boton;
+} MESSAGE_BMI_ON_OFF_PARAMETER;
+
+typedef struct{
+    uint16_t adc_PF[4];
+} MESSAGE_ACME_ADC_PARAMETER;
+
+typedef struct{
+    uint8_t GPIO;
+} MESSAGE_ACME_PARAMETER;
+
+typedef struct{
+    uint16_t valor[64];
 } MESSAGE_64_MUESTRAS_PARAMETER;
 
 typedef struct{
