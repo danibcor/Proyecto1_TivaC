@@ -339,7 +339,7 @@ static int Cmd_readAcc(int argc, char *argv[])
 
     if (argc != 1)
     {
-        //Si los parametros no son suficientes, muestro la ayuda
+        //Si los parï¿½metros no son suficientes, muestro la ayuda
         UARTprintf(" readacc\r\n");
     }
     else
@@ -354,13 +354,12 @@ static int Cmd_readAcc(int argc, char *argv[])
     return 0;
 }
 
-
 static int Cmd_readGyro(int argc, char *argv[])
 {
     if (argc != 1)
     {
-        //Si los parametros no son suficientes, muestro la ayuda
-        UARTprintf(" readGyro\r\n");
+        //Si los parï¿½metros no son suficientes, muestro la ayuda
+        UARTprintf(" readgyro\r\n");
     }
     else
     {
@@ -368,7 +367,7 @@ static int Cmd_readGyro(int argc, char *argv[])
 
         BMI160_getRotation(&x, &y, &z);
 
-        UARTprintf("Giroscopio: %d %d %d \r\n",(uint32_t)x, (uint32_t)y, (uint32_t)z);
+        UARTprintf("Giroscopio: %d %d %d \r\n",(uint32_t)x,(uint32_t)y,(uint32_t)z);
     }
 
     return 0;
@@ -426,7 +425,7 @@ static int Cmd_ACME(int argc, char *argv[])
         {
             if (argc<3)
             {
-                UARTprintf("acme input <val>\r\n");
+                UARTprintf("acme output <val>\r\n");
             }
             else
             {
@@ -471,7 +470,7 @@ static int Cmd_ACME(int argc, char *argv[])
             else
             {
                 uint16_t val=strtoul(argv[2],NULL,16);
-                if (ACME_setIntTriggerType ((val&0xFF), (val>>8)&0xFF)<0)
+                if (ACME_setIntTriggerType ((val&0xFF),(val>>8)&0xFF)<0)
                 {
                     UARTprintf("Error en el proceso...\r\n");
                 }
@@ -557,7 +556,7 @@ tCmdLineEntry g_psCmdTable[] =
     { "mode", Cmd_mode, "\t\t: Cambia los pines PF1, PF2 y PF3 entre modo GPIO y modo PWM (rgb)" },
     { "rgb", Cmd_rgb, "\t\t: Establece el color RGB" },
     { "readacc", Cmd_readAcc, "\t\t: Lee valores de aceleracion" },
-    { "readgyro", Cmd_readGyro, "\t\t: Lee valores del giroscopio" },
+    { "readgyro", Cmd_readGyro, "\t\t: Lee valores de giroscopio" },
     { "acme", Cmd_ACME, "\t\t: Lee valores de aceleracion" },
     { "intensity", Cmd_intensity, "\t: Cambia el nivel de intensidad" },
     { "free", Cmd_free, "\t\t: Muestra la memoria libre" },
@@ -586,11 +585,23 @@ static void vCommandTask( void *pvParameters )
 
 
     if (!ACME_initDevice())
-        {
-
+    {
         UARTprintf("\r\n Sensor ACME Inicializado \r\n");
-        }
-    else UARTprintf("\r\n Error en la inicizalizacion del sensor ACME \r\n");
+    }
+    else
+    {
+        UARTprintf("\r\n Error en la inicizalizacion del sensor ACME \r\n");
+    }
+
+    /*  HEMOS CONFIGURADO LOS PINES ASOCIADOS AL ACME COMO SALIDA O ENTRADA */
+    // Tenemos PB3 (GPIO3), PB2 (GPIO2), PB1 (GPIO1), PB0 (GPIO0)
+    // Queremos que PB3 y PB2 como salida, PB1 y PB0 como entrada
+    // Con la función setPinDir podemos especificar el modo, siendo 1 salida y un 0 como entrada
+    // C (hexadecimal) = 1100 (bin), poniendo a 1 el PB3 y PB2
+    ACME_setPinDir(0x0C);
+
+    /* HABILITAR LAS INTERRUPCIONES DE LOS PUERTOS DEL ACME */
+    ACME_setIntTriggerType(0x0F, 0xFF);
 
     BMI160_initialize();
 
@@ -602,10 +613,6 @@ static void vCommandTask( void *pvParameters )
     {
         UARTprintf("\r\n Error en la inicizalizacion del sensor BCI160 \r\n");
     }
-
-
-
-
 
     UARTprintf("\r\n\r\nWelcome to the TIVA FreeRTOS Demo!\r\n");
 	UARTprintf("\r\n\r\n FreeRTOS %s \r\n",

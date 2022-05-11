@@ -65,6 +65,7 @@ extern void UARTStdioIntHandler(void);
 extern void USB0DeviceIntHandler(void);
 extern void GPIOFIntHandler(void);
 extern void I2CDriver_ISR(void);
+extern void GPIOInt_A_Handler(void);
 //*****************************************************************************
 //
 // The vector table.  Note that the proper constructs must be placed on this to
@@ -92,7 +93,7 @@ void (* const g_pfnVectors[])(void) =
     0,                                      // Reserved
     xPortPendSVHandler,                     // The PendSV handler
     xPortSysTickHandler,                    // The SysTick handler
-    IntDefaultHandler,                      // GPIO Port A
+    GPIOInt_A_Handler,                      // GPIO Port A
     IntDefaultHandler,                      // GPIO Port B
     IntDefaultHandler,                      // GPIO Port C
     IntDefaultHandler,                      // GPIO Port D

@@ -29,6 +29,8 @@
 
 // Fichero creado para declarar las etiquetas el manejador de eventos
 #include "drivers/ColaEventos.h"
+#include "drivers/ACME_1623.h"
+#include "drivers/BMI160.h"
 
 //parametros de funcionamiento de la tareas
 #define REMOTELINK_TASK_STACK (512)
@@ -41,12 +43,21 @@
 // Tamaño de pila para la tarea maestra
 #define MASTERTASKSIZE 512
 
+// Prioridad para la tarea maestra
+#define ACMETASKPRIO 1
+// Tamaño de pila para la tarea maestra
+#define ACMETASKSIZE 256
+
 //Globales
 uint32_t g_ui32CPUUsage;
 uint32_t g_ulSystemClock;
 QueueHandle_t cola_freertos;
 
 EventGroupHandle_t FlagsEventos;
+
+static SemaphoreHandle_t stop_ACME;
+
+static TimerHandle_t CASIO_BMI;
 
 //*****************************************************************************
 //
@@ -113,6 +124,14 @@ void vApplicationMallocFailedHook (void)
 	while(1);
 }
 
+/*  CALLBACK del timer software para el BMI */
+void CASIOCallback(TimerHandle_t pxTimer)
+{
+    MESSAGE_BMI_DATOS_PARAMETER medidas_BMI;
+    BMI160_getAcceleration(&medidas_BMI.acc[0], &medidas_BMI.acc[1], &medidas_BMI.acc[2]);
+    BMI160_getRotation(&medidas_BMI.gyro[0], &medidas_BMI.gyro[1], &medidas_BMI.gyro[2]);
+    remotelink_sendMessage(MESSAGE_BMI_DATOS, (void *)&medidas_BMI, sizeof(medidas_BMI));
+}
 
 
 //*****************************************************************************
@@ -120,6 +139,44 @@ void vApplicationMallocFailedHook (void)
 // A continuacion van las tareas...
 //
 //*****************************************************************************
+
+static portTASK_FUNCTION(TareaACME,pvParameters)
+{
+    MESSAGE_ACME_PARAMETER estado_pines;
+    MESSAGE_ACME_ADC_PARAMETER estado_adc;
+    uint8_t state;
+
+    while(1)
+    {
+        // Cogemos el semaforo cuando se ha producido una interrupcion del pin PA3
+        xSemaphoreTake(stop_ACME, portMAX_DELAY);
+
+        ACME_readInt(&state);
+
+        // El cuarto bit indica si se ha activado el flag del ADC
+        if(state & 0x10)
+        {
+            ACME_readADC(estado_adc.adc_PF);
+
+            remotelink_sendMessage(MESSAGE_ACME_ADC, (void *)&estado_adc, sizeof(estado_adc));
+        }
+
+        // Si se activa el bit 1 (GPIO0) o el bit 2 (GPIO1)
+        if(state & 0x01 || state & 0x02)
+        {
+            // Queremos obtener el valor de los pines conectados como entradas
+            // Los pones configurados como salida se leeran con el valor logico 0
+            ACME_readPin(&estado_pines.GPIO);
+
+            remotelink_sendMessage(MESSAGE_ACME, (void *)&estado_pines, sizeof(estado_pines));
+        }
+
+        // Borramos los flags de todos los GPIO
+        ACME_clearInt(0xFF);
+    }
+}
+
+
 static portTASK_FUNCTION(TareaMaestra,pvParameters)
 {
     MESSAGE_ESTADO_SWITCH_EVENTOS_PARAMETER estado;
@@ -141,8 +198,8 @@ static portTASK_FUNCTION(TareaMaestra,pvParameters)
 
         if(eventos & (BOTONES))
         {
-            if (xQueueReceive(cola_freertos,&ui32Status,portMAX_DELAY) == pdTRUE){
-
+            if (xQueueReceive(cola_freertos, &ui32Status, portMAX_DELAY) == pdTRUE)
+            {
                 if(ui32Status == 0)
                 {
                     UARTprintf("Switch 1 y Switch 2 pulsados\r\n");
@@ -327,32 +384,10 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
             {
                 UARTprintf("Llegan mensajes para comprobar estados de los switches...\r\n");
 
-                if((GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4) == 0) && (GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_0) == 0))
-                {
-                    UARTprintf("Switch 1 y Switch 2 pulsados\r\n");
-                    estado.switch1 = 0;
-                    estado.switch2 = 0;
-                }
-                else if(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_4) == 0)
-                {
-                    UARTprintf("Switch 1 pulsado\r\n");
-                    estado.switch1 = 0;
-                    estado.switch2 = 1;
-                }
-                else if(GPIOPinRead(GPIO_PORTF_BASE,GPIO_PIN_0) == 0)
-                {
-                    UARTprintf("Switch 2 pulsado\r\n");
-                    estado.switch2 = 0;
-                    estado.switch1 = 1;
-                }
-                else
-                {
-                    UARTprintf("Switch 1 o Switch 2 no pulsado\r\n");
-                    estado.switch2 = 1;
-                    estado.switch1 = 1;
-                }
+                estado.switch1 = GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_4);
+                estado.switch2 = GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0);
 
-                remotelink_sendMessage(MESSAGE_ESTADO_SWITCH,(void *)&estado,sizeof(estado));
+                remotelink_sendMessage(MESSAGE_ESTADO_SWITCH, (void *)&estado, sizeof(estado));
             }
             else
             {
@@ -371,7 +406,7 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
             {
                 if(estado.on_off == 1)
                 {
-                    GPIOIntTypeSet(GPIO_PORTF_BASE, ALL_BUTTONS,GPIO_BOTH_EDGES);
+                    GPIOIntTypeSet(GPIO_PORTF_BASE, ALL_BUTTONS, GPIO_BOTH_EDGES);
                     IntPrioritySet(INT_GPIOF,configMAX_SYSCALL_INTERRUPT_PRIORITY);
                     GPIOIntEnable(GPIO_PORTF_BASE,ALL_BUTTONS);
                     IntEnable(INT_GPIOF);
@@ -380,9 +415,9 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
                 {
                     // Deshabilitamos las interrupciones de los switches
                     IntDisable(INT_GPIOF);
-                    estado.switch2 = 1;
                     estado.switch1 = 1;
-                    remotelink_sendMessage(MESSAGE_ESTADO_SWITCH_EVENTOS,(void *)&estado,sizeof(estado));
+                    estado.switch2 = 1;
+                    remotelink_sendMessage(MESSAGE_ESTADO_SWITCH_EVENTOS, (void *)&estado, sizeof(estado));
                 }
             }
             else
@@ -434,6 +469,52 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
 
         break;
 
+        case MESSAGE_ACME:
+        {
+            MESSAGE_ACME_PARAMETER val_acme;
+
+            if (check_and_extract_command_param(parameters, parameterSize, &val_acme, sizeof(val_acme)) > 0)
+            {
+                UARTprintf("ACME GPIO2 Y 3: %d\r\n",(uint8_t)val_acme.GPIO);
+                ACME_writePin(val_acme.GPIO);
+            }
+            else
+            {
+                status = PROT_ERROR_INCORRECT_PARAM_SIZE;
+            }
+        }
+
+        break;
+
+        case MESSAGE_BMI_ON_OFF:
+        {
+            MESSAGE_BMI_ON_OFF_PARAMETER val_BMI_on_off;
+
+            if (check_and_extract_command_param(parameters, parameterSize, &val_BMI_on_off, sizeof(val_BMI_on_off)) > 0)
+            {
+                if(val_BMI_on_off.estado_boton == 1)
+                {
+                    if(xTimerStart(CASIO_BMI, 0) != pdPASS)
+                    {
+                        while(1);
+                    }
+                }
+                else
+                {
+                    if(xTimerStop(CASIO_BMI, 0) != pdPASS)
+                    {
+                        while(1);
+                    }
+                }
+            }
+            else
+            {
+                status = PROT_ERROR_INCORRECT_PARAM_SIZE;
+            }
+        }
+
+        break;
+
         default:
            //mensaje desconocido/no implementado
            status = PROT_ERROR_UNIMPLEMENTED_COMMAND;
@@ -451,6 +532,13 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
 //*****************************************************************************
 int main(void)
 {
+    // Creamos el semaforo para la gestion del ACME
+    stop_ACME = xSemaphoreCreateBinary();
+    if(stop_ACME == NULL)
+    {
+        while(1);
+    }
+
     //Crea el grupo de eventos
     FlagsEventos = xEventGroupCreate();
     if( FlagsEventos == NULL )
@@ -501,6 +589,19 @@ int main(void)
     //GPIOIntEnable(GPIO_PORTF_BASE,ALL_BUTTONS);
     //IntEnable(INT_GPIOF);
 
+    // Configuracion del puerto PA3 para las interrupciones del ACME
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+    SysCtlPeripheralSleepEnable(SYSCTL_PERIPH_GPIOA);
+
+    GPIOPinTypeGPIOInput(GPIO_PORTA_BASE, GPIO_PIN_3);
+
+    // El PA3 esta asociado a la señal de salida /INT que es activa a nivel bajo, el pin /INT
+    // quedará a un nivel bajo (0), volviendo a nivel alto (1) cuando se borren los flags, ver pag.5 datasheet ACME1623
+    GPIOIntTypeSet(GPIO_PORTA_BASE, GPIO_PIN_3, GPIO_FALLING_EDGE);
+
+    IntPrioritySet(INT_GPIOA, configMAX_SYSCALL_INTERRUPT_PRIORITY);
+    GPIOIntEnable(GPIO_PORTA_BASE, GPIO_PIN_3);
+    IntEnable(INT_GPIOA);
 
 	/********************************      Creacion de tareas *********************/
 
@@ -524,6 +625,16 @@ int main(void)
 
     if((xTaskCreate(TareaMaestra, "MasterTask", MASTERTASKSIZE, NULL, tskIDLE_PRIORITY + MASTERTASKPRIO, NULL) != pdTRUE))
     {
+        while(1);
+    }
+
+    if((xTaskCreate(TareaACME, "ACMETask", ACMETASKSIZE, NULL, tskIDLE_PRIORITY + ACMETASKPRIO, NULL) != pdTRUE))
+    {
+        while(1);
+    }
+
+    CASIO_BMI = xTimerCreate("TIMER_BMI", 40/portTICK_PERIOD_MS, pdTRUE, NULL, CASIOCallback);
+    if(CASIO_BMI == NULL){
         while(1);
     }
 
@@ -556,5 +667,21 @@ void GPIOFIntHandler(void)
 
     // Ahora hay que comprobar si hay que hacer el cambio de contexto
     //Se puede hacer con CUALQUIERA de las dos lineas siguientes (las dos hacen lo mismo)
+    portEND_SWITCHING_ISR(higherPriorityTaskWoken);
+}
+
+// Manejador del pin PA3 para las interrupciones del ACME
+void GPIOInt_A_Handler(void)
+{
+    BaseType_t higherPriorityTaskWoken = pdFALSE;
+
+    int32_t i32PinStatus = GPIOIntStatus(GPIO_PORTA_BASE, true);
+
+    if(i32PinStatus & GPIO_PIN_3)
+    {
+        xSemaphoreGiveFromISR(stop_ACME, &higherPriorityTaskWoken);
+    }
+
+    MAP_GPIOIntClear(GPIO_PORTA_BASE, GPIO_PIN_3);
     portEND_SWITCHING_ISR(higherPriorityTaskWoken);
 }
