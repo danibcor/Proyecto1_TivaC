@@ -1,14 +1,10 @@
-# Proyecto1 TivaC
-Todas las especificaciones pertenecientes al proyecto 1 para la asignatura de Sistemas Empotrados.
-
-Repositorio para realizar un control de seguimiento & versiones de los proyectos a realizar para la asignatura de Sistemas Empotrados.
-
-Realizado por Juan José Navarrete Galvez & Daniel Bazo Correa, Grado en Ingeniería de Sistemas Electrónicos, Universidad de Málaga.
+# Project with the Tiva C 
+All the specifications belonging to project 1 for the Embedded Systems course.
+Repository for tracking and version control of the projects to be done for the Embedded Systems course.
+Made by Juan José Navarrete Galvez and Daniel Bazo Correa, Bachelor's Students in Electronic Systems Engineering, University of Málaga.
 
 
-EJ (3/4) - Holi
-
-PROYECTO 1: </br></br>
-Especificaciones 1: OK </br>
-Especificaciones 2: OK </br>
-Especificaciones 3: OK </br>
+PROJECT 1: </br></br>
+Specifications 1: OK </br>
+Specifications 2: OK </br>
+Specifications 3: OK </br>
