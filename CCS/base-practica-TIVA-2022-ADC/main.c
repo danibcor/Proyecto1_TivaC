@@ -380,19 +380,12 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
         {
             MESSAGE_ESTADO_SWITCH_PARAMETER estado;
 
-            if (check_and_extract_command_param(parameters, parameterSize, &estado, sizeof(estado)) > 0)
-            {
-                UARTprintf("Llegan mensajes para comprobar estados de los switches...\r\n");
+            UARTprintf("Llegan mensajes para comprobar estados de los switches...\r\n");
 
-                estado.switch1 = GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_4);
-                estado.switch2 = GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0);
+            estado.switch1 = GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_4);
+            estado.switch2 = GPIOPinRead(GPIO_PORTF_BASE, GPIO_PIN_0);
 
-                remotelink_sendMessage(MESSAGE_ESTADO_SWITCH, (void *)&estado, sizeof(estado));
-            }
-            else
-            {
-                status = PROT_ERROR_INCORRECT_PARAM_SIZE;
-            }
+            remotelink_sendMessage(MESSAGE_ESTADO_SWITCH, (void *)&estado, sizeof(estado));
         }
 
         break;
@@ -505,6 +498,72 @@ static int32_t messageReceived(uint8_t message_type, void *parameters, int32_t p
                     {
                         while(1);
                     }
+                }
+            }
+            else
+            {
+                status = PROT_ERROR_INCORRECT_PARAM_SIZE;
+            }
+        }
+
+        break;
+
+        case MESSAGE_BMI_CAMBIO_ACC:
+        {
+            MESSAGE_BMI_CAMBIO_ACC_PARAMETER val_cambio_acc;
+
+            if (check_and_extract_command_param(parameters, parameterSize, &val_cambio_acc, sizeof(val_cambio_acc)) > 0)
+            {
+                if(val_cambio_acc.cambio_acc == 2)
+                {
+                    BMI160_setFullScaleAccelRange(BMI160_ACCEL_RANGE_2G);
+                }
+                else if(val_cambio_acc.cambio_acc == 4)
+                {
+                    BMI160_setFullScaleAccelRange(BMI160_ACCEL_RANGE_4G);
+                }
+                else if(val_cambio_acc.cambio_acc == 8)
+                {
+                    BMI160_setFullScaleAccelRange(BMI160_ACCEL_RANGE_8G);
+                }
+                else if(val_cambio_acc.cambio_acc == 16)
+                {
+                    BMI160_setFullScaleAccelRange(BMI160_ACCEL_RANGE_16G);
+                }
+            }
+            else
+            {
+                status = PROT_ERROR_INCORRECT_PARAM_SIZE;
+            }
+        }
+
+        break;
+
+        case MESSAGE_BMI_CAMBIO_GYR:
+        {
+            MESSAGE_BMI_CAMBIO_GYR_PARAMETER val_cambio_gyr;
+
+            if (check_and_extract_command_param(parameters, parameterSize, &val_cambio_gyr, sizeof(val_cambio_gyr)) > 0)
+            {
+                if(val_cambio_gyr.cambio_gyro == 125)
+                {
+                    BMI160_setFullScaleGyroRange(BMI160_GYRO_RANGE_125);
+                }
+                else if(val_cambio_gyr.cambio_gyro == 250)
+                {
+                    BMI160_setFullScaleGyroRange(BMI160_GYRO_RANGE_250);
+                }
+                else if(val_cambio_gyr.cambio_gyro == 500)
+                {
+                    BMI160_setFullScaleGyroRange(BMI160_GYRO_RANGE_500);
+                }
+                else if(val_cambio_gyr.cambio_gyro == 1000)
+                {
+                    BMI160_setFullScaleGyroRange(BMI160_GYRO_RANGE_1000);
+                }
+                else if(val_cambio_gyr.cambio_gyro == 2000)
+                {
+                    BMI160_setFullScaleGyroRange(BMI160_GYRO_RANGE_2000);
                 }
             }
             else
