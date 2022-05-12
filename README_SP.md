@@ -1,3 +1,4 @@
+[README English](https://github.com/danibcor/Proyecto1_TivaC/blob/main/README.md) / [README Spanish](https://github.com/danibcor/Proyecto1_TivaC/blob/main/README_SP.md)
 # Proyecto1 TivaC
 Todas las especificaciones pertenecientes al proyecto 1 para la asignatura de Sistemas Empotrados.
 
