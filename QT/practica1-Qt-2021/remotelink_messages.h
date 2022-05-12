@@ -23,12 +23,22 @@ typedef enum {
     MESSAGE_ACME_ADC,
     MESSAGE_BMI_ON_OFF,
     MESSAGE_BMI_DATOS,
+    MESSAGE_BMI_CAMBIO_ACC,
+    MESSAGE_BMI_CAMBIO_GYR,
 } messageTypes;
 
 //Estructuras relacionadas con los parametros de los mensahes. El estuadiante debera crear las
 // estructuras adecuadas a los comandos usados, y asegurarse de su compatibilidad en ambos extremos
 
 #pragma pack(1) //Cambia el alineamiento de datos en memoria a 1 byte.
+
+typedef struct{
+    uint8_t cambio_acc;
+} MESSAGE_BMI_CAMBIO_ACC_PARAMETER;
+
+typedef struct{
+    uint16_t cambio_gyro;
+} MESSAGE_BMI_CAMBIO_GYR_PARAMETER;
 
 typedef struct{
     int16_t acc[3];

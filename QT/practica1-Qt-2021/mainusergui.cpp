@@ -8,6 +8,7 @@
 
 #include<stdint.h>          // Cabecera para usar tipos de enteros con tamaño
 #include<stdbool.h>         // Cabecera para usar booleanos
+#include <cmath>
 
 static double y_play = 0;
 static int16_t x_anterior_play = 0;
@@ -16,6 +17,10 @@ static int16_t x_anterior_play = 0;
 // ui(new Ui::MainUserGUI) -> Indica que guipanel.ui es el interfaz grafico de la clase
 MainUserGUI::MainUserGUI(QWidget *parent): QWidget(parent), ui(new Ui::MainUserGUI), transactionCount(0)
 {
+    // Inicializacion de los valores para el cambio de rango del BMI
+    LA_VELOCIDAD = 2;
+    EL_GIRO = 250;
+
     // Conecta la clase con su interfaz gráfico.
     ui->setupUi(this);
 
@@ -104,9 +109,9 @@ MainUserGUI::MainUserGUI(QWidget *parent): QWidget(parent), ui(new Ui::MainUserG
     ui->graf_acc->setAxisTitle(QwtPlot::xBottom, "Tiempo");
     ui->graf_acc->setAxisTitle(QwtPlot::yLeft, "Aceleracion (G)");
     ui->graf_acc->setAxisScale(QwtPlot::yLeft, -2, 2);
-    ui->graf_acc->setAxisScale(QwtPlot::xBottom, 0, 1024.0);
+    ui->graf_acc->setAxisScale(QwtPlot::xBottom, 0, 500.0);
 
-    for(int i = 0; i < 1024; i++)
+    for(int i = 0; i < 500; i++)
     {
         xVal_acc[i] = i;
         yVal_acc[0][i] = 0;
@@ -121,7 +126,7 @@ MainUserGUI::MainUserGUI(QWidget *parent): QWidget(parent), ui(new Ui::MainUserG
         curva_acc[i]->attach(ui->graf_acc);
 
         // Inicializacion de los datos apuntando a bloques de memoria,  por eficiencia
-        curva_acc[i]->setRawSamples(xVal_acc, yVal_acc[i], 1024);
+        curva_acc[i]->setRawSamples(xVal_acc, yVal_acc[i], 500);
     }
 
     // Colores de las curvas
@@ -138,9 +143,9 @@ MainUserGUI::MainUserGUI(QWidget *parent): QWidget(parent), ui(new Ui::MainUserG
     ui->graf_giro->setAxisTitle(QwtPlot::xBottom, "Tiempo");
     ui->graf_giro->setAxisTitle(QwtPlot::yLeft, "Velocidad angular (º/s)");
     ui->graf_giro->setAxisScale(QwtPlot::yLeft, -250, 250);
-    ui->graf_giro->setAxisScale(QwtPlot::xBottom, 0, 1024.0);
+    ui->graf_giro->setAxisScale(QwtPlot::xBottom, 0, 500.0);
 
-    for(int i = 0; i < 1024; i++)
+    for(int i = 0; i < 500; i++)
     {
         xVal_gyro[i] = i;
         yVal_gyro[0][i] = 0;
@@ -155,7 +160,7 @@ MainUserGUI::MainUserGUI(QWidget *parent): QWidget(parent), ui(new Ui::MainUserG
         curva_gyro[i]->attach(ui->graf_giro);
 
         // Inicializacion de los datos apuntando a bloques de memoria,  por eficiencia
-        curva_gyro[i]->setRawSamples(xVal_gyro, yVal_gyro[i], 1024);
+        curva_gyro[i]->setRawSamples(xVal_gyro, yVal_gyro[i], 500);
     }
 
     // Colores de las curvas
@@ -277,7 +282,6 @@ void MainUserGUI::on_pingButton_clicked()
 
 void MainUserGUI::cambiaLEDs(void)
 {
-
     MESSAGE_LED_GPIO_PARAMETER parameter;
 
     parameter.leds.red = ui->rojo->isChecked();
@@ -488,7 +492,7 @@ void MainUserGUI::messageReceived(uint8_t message_type,  QByteArray datos)
             {
                 for(int i = 0;i < 3;i++)
                 {
-                    for(int j = 0; j < 1024 - 1; j++)
+                    for(int j = 0; j < 500 - 1; j++)
                     {
                          yVal_acc[i][j] = yVal_acc[i][j+1];
                          yVal_gyro[i][j] = yVal_gyro[i][j+1];
@@ -497,8 +501,8 @@ void MainUserGUI::messageReceived(uint8_t message_type,  QByteArray datos)
 
                 for(int i = 0;i < 3;i++)
                 {
-                    yVal_acc[i][1023] = ((double)medidas.acc[i])*2/65536.0;
-                    yVal_gyro[i][1023] = ((double)medidas.gyro[i])*250/65536.0;
+                    yVal_acc[i][499] = ((double)medidas.acc[i])*LA_VELOCIDAD/32768.0;
+                    yVal_gyro[i][499] = ((double)medidas.gyro[i])*EL_GIRO/32768.0;
                 }
 
                 ui->graf_acc->replot();
@@ -574,14 +578,7 @@ void MainUserGUI::cambiaMODO()
 {
     MESSAGE_MODE_PARAMETER modo;
 
-    if(ui->PWM_GPIO->isChecked())
-    {
-        modo.modotx = 1;
-    }
-    else
-    {
-        modo.modotx = 0;
-    }
+    modo.modotx = ui->PWM_GPIO->isChecked();
 
     tiva.sendMessage(MESSAGE_MODE, QByteArray::fromRawData((char *)&modo, sizeof(modo)));
 }
@@ -605,22 +602,14 @@ void MainUserGUI::colorWheel_cambiaRGB(const QColor &arg1)
 // esta función se encuentra mas arriba en este fichero
 void MainUserGUI::comprobarEstado()
 {
-    MESSAGE_ESTADO_SWITCH_PARAMETER estado;
-    tiva.sendMessage(MESSAGE_ESTADO_SWITCH, QByteArray::fromRawData((char *)&estado, sizeof(estado)));
+    tiva.sendMessage(MESSAGE_ESTADO_SWITCH, NULL, 0);
 }
 
 void MainUserGUI::comprobarEstado_Eventos()
 {
     MESSAGE_ESTADO_SWITCH_EVENTOS_PARAMETER estado;
 
-    if(ui->botonEstado_evento->isChecked())
-    {
-        estado.on_off = 1;
-    }
-    else
-    {
-        estado.on_off = 0;
-    }
+    estado.on_off = ui->botonEstado_evento->isChecked();
 
     tiva.sendMessage(MESSAGE_ESTADO_SWITCH_EVENTOS, QByteArray::fromRawData((char *)&estado, sizeof(estado)));
 }
@@ -776,14 +765,55 @@ void MainUserGUI::bmi_on_off()
 {
     MESSAGE_BMI_ON_OFF_PARAMETER button_state;
 
-    if(ui->bmi_activar->isChecked())
+    button_state.estado_boton = ui->bmi_activar->isChecked();
+
+    if(ui->bmi_activar->isChecked() == 1)
     {
-        button_state.estado_boton = 1;
+        ui->rango_acc->setDisabled(true);
+        ui->rango_gyro->setDisabled(true);
     }
     else
     {
-        button_state.estado_boton = 0;
+        ui->rango_acc->setDisabled(false);
+        ui->rango_gyro->setDisabled(false);
+
+        for(int i = 0; i < 500; i++)
+        {
+            xVal_gyro[i] = i;
+            yVal_gyro[0][i] = 0;
+            yVal_gyro[1][i] = 0;
+            yVal_gyro[2][i] = 0;
+        }
     }
 
     tiva.sendMessage(MESSAGE_BMI_ON_OFF, QByteArray::fromRawData((char *)&button_state, sizeof(button_state)));
 }
+
+void MainUserGUI::on_rango_acc_currentIndexChanged(int index)
+{
+    MESSAGE_BMI_CAMBIO_ACC_PARAMETER nuevo_valor_acc;
+
+    // 2 ^ (INDICE + 1) => 2 ^ (0 + 1) = 2 (valor del rango de aceleracion), 2 ^ (1 + 1) = 4, 2 ^ (2 + 1) = 8 y 2 ^ (3 + 1) = 16
+    nuevo_valor_acc.cambio_acc = pow(2, index + 1);
+    LA_VELOCIDAD = nuevo_valor_acc.cambio_acc;
+
+    ui->graf_acc->setAxisScale(QwtPlot::yLeft, -LA_VELOCIDAD, LA_VELOCIDAD);
+
+    tiva.sendMessage(MESSAGE_BMI_CAMBIO_ACC, QByteArray::fromRawData((char *)&nuevo_valor_acc, sizeof(nuevo_valor_acc)));
+}
+
+
+void MainUserGUI::on_rango_gyro_currentIndexChanged(int index)
+{
+    MESSAGE_BMI_CAMBIO_GYR_PARAMETER nuevo_valor_gyr;
+
+    // 125 * 2 ^ (INDICE) =>  125 * 2 ^ (0) = 125 (valor del rango de acelerometro (velocidad)), 125 * 2 ^ (1) = 250, 125 * 2 ^ (2) = 500
+    // 125 * 2 ^ (3) = 1000 y 125 * 2 ^ (4) = 2000
+    nuevo_valor_gyr.cambio_gyro = 125 * pow(2, index);
+    EL_GIRO = nuevo_valor_gyr.cambio_gyro;
+
+    ui->graf_giro->setAxisScale(QwtPlot::yLeft, -EL_GIRO, EL_GIRO);
+
+    tiva.sendMessage(MESSAGE_BMI_CAMBIO_GYR, QByteArray::fromRawData((char *)&nuevo_valor_gyr, sizeof(nuevo_valor_gyr)));
+}
+

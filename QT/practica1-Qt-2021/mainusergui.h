@@ -52,6 +52,9 @@ class MainUserGUI : public QWidget
         // Sensores ACME y BMI
         void acme_encendido();
         void bmi_on_off();
+        void on_rango_acc_currentIndexChanged(int index);
+
+        void on_rango_gyro_currentIndexChanged(int index);
 
     private:
         // funciones privadas
@@ -70,19 +73,22 @@ class MainUserGUI : public QWidget
 
         /*  Variables graficas ACC   */
         //valores eje X
-        double xVal_acc[1024];
+        double xVal_acc[500];
         //valores ejes Y
-        double yVal_acc[3][1024];
+        double yVal_acc[3][500];
         //Curvas
         QwtPlotCurve *curva_acc[3];
 
         /*  Variables graficas GYRO  */
         //valores eje X
-        double xVal_gyro[1024];
+        double xVal_gyro[500];
         //valores ejes Y
-        double yVal_gyro[3][1024];
+        double yVal_gyro[3][500];
         //Curvas
         QwtPlotCurve *curva_gyro[3];
+
+        uint8_t LA_VELOCIDAD;
+        uint16_t EL_GIRO;
 
     private:
         //Componentes privados
