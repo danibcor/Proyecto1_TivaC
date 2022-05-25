@@ -902,7 +902,7 @@ p, li { white-space: pre-wrap; }
        <x>10</x>
        <y>20</y>
        <width>1041</width>
-       <height>471</height>
+       <height>481</height>
       </rect>
      </property>
      <layout class="QGridLayout" name="gridLayout_9">

@@ -471,6 +471,7 @@ void MainUserGUI::messageReceived(uint8_t message_type,  QByteArray datos)
 
             if (check_and_extract_command_param(datos.data(),  datos.size(),  &parametro,  sizeof(parametro))>0)
             {
+                // El ACME tiene un conversor ADC de 14 bits, por lo tanto 2^14 = 16384
                 ui->PF0_display->display(((double)parametro.adc_PF[0])*3.3/16384.0);
                 ui->PF1_display->display(((double)parametro.adc_PF[1])*3.3/16384.0);
                 ui->PF2_display->display(((double)parametro.adc_PF[2])*3.3/16384.0);
