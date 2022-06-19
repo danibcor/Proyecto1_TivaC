@@ -1,10 +1,8 @@
-# BLOC DE NOTAS
+# BLOC DE NOTAS DUDAS/PREGUNTAS
 
 DUDA:
-- ON/OFF BMI: ¿solo timer y grafica o tambien ponemos en suspension el propio sensor?
 
 BUGS:
-- Cambiar nombre graficas acc y gyro.
 
 
 CAMBIOS 25/04
