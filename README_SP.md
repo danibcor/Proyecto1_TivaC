@@ -7,3 +7,6 @@ Repositorio para realizar un control de seguimiento & versiones de los proyectos
 
 ## 👤 Contribuyentes
 Realizado por Juan José Navarrete Galvez & Daniel Bazo Correa, Grado en Ingeniería de Sistemas Electrónicos, Universidad de Málaga.
+
+## ⭐️ Licencia
+[Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
