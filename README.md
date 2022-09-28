@@ -10,4 +10,4 @@ Made by Juan José Navarrete Galvez and Daniel Bazo Correa, Bachelor's Students 
 
 ## ⭐ License
 
-[Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
+[Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/)
